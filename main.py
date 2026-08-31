@@ -50,20 +50,28 @@ HTML_PAGE = """<!DOCTYPE html>
 <body class="bg-slate-950 text-slate-100 min-h-screen">
   <div class="max-w-5xl mx-auto px-6 py-12">
     
-    <!-- Modern Header with Logo -->
+   <!-- Modern Visible Brand Logo & Header -->
     <header class="text-center mb-10 no-print flex flex-col items-center">
-      <div class="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-slate-900 border border-slate-800 shadow-xl mb-4">
-        <div class="w-7 h-7 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-slate-950 shadow-md">
-          <svg class="w-4 h-4 text-slate-950" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+      
+      <!-- Logo Container -->
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-12 h-12 rounded-2xl bg-emerald-500 flex items-center justify-center shadow-lg shadow-emerald-500/40">
+          <!-- Brain / Career Growth AI SVG Icon -->
+          <svg class="w-7 h-7 text-slate-950" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+            <path d="M2 17l10 5 10-5"></path>
+            <path d="M2 12l10 5 10-5"></path>
           </svg>
         </div>
-        <span class="text-xs font-bold tracking-wide uppercase bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">
-          InternWise Intelligence
-        </span>
+        <h1 class="text-4xl sm:text-5xl font-black tracking-tight">Intern<span class="text-emerald-400">Wise</span></h1>
       </div>
-      <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight">Intern<span class="text-emerald-400">Wise</span></h1>
-      <p class="text-slate-400 mt-2 text-sm sm:text-base max-w-lg">Instant resume gap analysis, personalized skill roadmap & interactive mock interview</p>
+
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold uppercase tracking-wider mb-2">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        AI Career Intelligence Platform
+      </div>
+
+      <p class="text-slate-400 text-sm sm:text-base max-w-lg">Instant resume gap analysis, personalized skill roadmap & interactive mock interview</p>
     </header>
 
     <!-- Upload Box -->
