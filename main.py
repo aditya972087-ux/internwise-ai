@@ -1,3 +1,6 @@
+import io
+import os
+import json
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
@@ -5,9 +8,6 @@ from pydantic import BaseModel
 from pypdf import PdfReader
 from google import genai
 from google.genai import types
-import io
-import os
-import json
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -35,7 +35,8 @@ HTML_PAGE = """<!DOCTYPE html>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>InternWise - AI Career Intelligence</title>
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2310b981' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5'/></svg>">
+  <!-- Browser Favicon -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2310b981' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><path d='M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5'/></svg>">
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
@@ -50,14 +51,13 @@ HTML_PAGE = """<!DOCTYPE html>
 <body class="bg-slate-950 text-slate-100 min-h-screen">
   <div class="max-w-5xl mx-auto px-6 py-12">
     
-   <!-- Modern Visible Brand Logo & Header -->
+    <!-- Prominent Visual Logo & Brand Header -->
     <header class="text-center mb-10 no-print flex flex-col items-center">
       
-      <!-- Logo Container -->
-      <div class="flex items-center gap-3 mb-3">
-        <div class="w-12 h-12 rounded-2xl bg-emerald-500 flex items-center justify-center shadow-lg shadow-emerald-500/40">
-          <!-- Brain / Career Growth AI SVG Icon -->
-          <svg class="w-7 h-7 text-slate-950" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <!-- Brand Logo + Name -->
+      <div class="flex items-center justify-center gap-3.5 mb-3">
+        <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-500/30 text-slate-950">
+          <svg class="w-7 h-7 text-slate-950" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
             <path d="M2 17l10 5 10-5"></path>
             <path d="M2 12l10 5 10-5"></path>
@@ -66,15 +66,16 @@ HTML_PAGE = """<!DOCTYPE html>
         <h1 class="text-4xl sm:text-5xl font-black tracking-tight">Intern<span class="text-emerald-400">Wise</span></h1>
       </div>
 
-      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold uppercase tracking-wider mb-2">
+      <!-- Verified Badge -->
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold uppercase tracking-wider mb-2">
         <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
         AI Career Intelligence Platform
       </div>
 
-      <p class="text-slate-400 text-sm sm:text-base max-w-lg">Instant resume gap analysis, personalized skill roadmap & interactive mock interview</p>
+      <p class="text-slate-400 text-sm sm:text-base max-w-lg">Instant resume gap analysis, personalized skill roadmap & interactive AI mock interview</p>
     </header>
 
-    <!-- Upload Box -->
+    <!-- Upload Form Box -->
     <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl mb-10 no-print">
       <div class="space-y-6">
         <div>
@@ -105,6 +106,7 @@ HTML_PAGE = """<!DOCTYPE html>
         </button>
       </div>
 
+      <!-- Match Accuracy Card -->
       <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6 print-card">
         <div>
           <span class="text-xs uppercase font-bold tracking-wider text-slate-400">Match Accuracy</span>
@@ -114,6 +116,7 @@ HTML_PAGE = """<!DOCTYPE html>
         <div class="text-5xl font-black text-emerald-400" id="matchScore">--%</div>
       </div>
 
+      <!-- Skills Grid -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 print-card">
           <h4 class="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-4">Detected Skills in Resume</h4>
@@ -126,6 +129,7 @@ HTML_PAGE = """<!DOCTYPE html>
         </div>
       </div>
 
+      <!-- Roadmap & Project Recommendation -->
       <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-6 print-card">
         <div>
           <h4 class="text-base font-bold text-emerald-400 mb-3">2-Week Fast-Track Learning Roadmap</h4>
@@ -140,15 +144,17 @@ HTML_PAGE = """<!DOCTYPE html>
         </div>
       </div>
 
+      <!-- Improvement Points -->
       <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 print-card">
         <h4 class="text-sm font-bold text-slate-200 uppercase tracking-wider mb-3">Resume Improvement Points</h4>
         <ul id="feedbackList" class="list-disc list-inside space-y-2 text-sm text-slate-300"></ul>
       </div>
 
+      <!-- Interactive Mock Interview Section -->
       <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-6 print-card">
         <div>
           <h4 class="text-lg font-bold text-emerald-400">Interactive AI Mock Interview</h4>
-          <p class="text-xs text-slate-400 mt-1">Type your answer below and submit to get real-time AI scoring & model answers.</p>
+          <p class="text-xs text-slate-400 mt-1">Type your response below and submit to get real-time AI evaluation, scoring & key answer points.</p>
         </div>
         <div id="interviewQuestionsContainer" class="space-y-6"></div>
       </div>
@@ -200,13 +206,13 @@ HTML_PAGE = """<!DOCTYPE html>
         (analysis.candidate_skills || []).forEach(function(s) {
           detectedHtml += '<span class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">' + s + '</span>';
         });
-        document.getElementById('detectedSkills').innerHTML = detectedHtml;
+        document.getElementById('detectedSkills').innerHTML = detectedHtml || '<span class="text-xs text-slate-500">None detected</span>';
 
         var missingHtml = '';
         (analysis.missing_skills || []).forEach(function(s) {
           missingHtml += '<span class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/20">' + s + '</span>';
         });
-        document.getElementById('missingSkills').innerHTML = missingHtml;
+        document.getElementById('missingSkills').innerHTML = missingHtml || '<span class="text-xs text-emerald-400 font-semibold">No major missing skills!</span>';
 
         var roadmapHtml = '';
         (analysis.learning_roadmap || []).forEach(function(step, idx) {
@@ -215,7 +221,7 @@ HTML_PAGE = """<!DOCTYPE html>
         document.getElementById('roadmapList').innerHTML = roadmapHtml;
 
         var project = analysis.recommended_project || {};
-        document.getElementById('projectIdea').innerHTML = '<strong>' + (project.title || 'Project') + ':</strong> ' + (project.description || 'Build a portfolio project.');
+        document.getElementById('projectIdea').innerHTML = '<strong>' + (project.title || 'Project') + ':</strong> ' + (project.description || 'Build a portfolio project targeting missing skills.');
 
         var feedbackHtml = '';
         (analysis.resume_feedback || []).forEach(function(f) {
@@ -293,3 +299,112 @@ HTML_PAGE = """<!DOCTYPE html>
   </script>
 </body>
 </html>"""
+
+@app.get("/", response_class=HTMLResponse)
+def serve_home():
+    return HTML_PAGE
+
+@app.post("/api/analyze-resume")
+async def analyze_resume(
+    file: UploadFile = File(...),
+    job_description: str = Form("Software Development Internship")
+):
+    if not file.filename.endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Sirf PDF format allow hai.")
+
+    if not client:
+        raise HTTPException(status_code=500, detail="GEMINI_API_KEY config missing hai.")
+
+    try:
+        pdf_bytes = await file.read()
+        reader = PdfReader(io.BytesIO(pdf_bytes))
+        extracted_text = " ".join([page.extract_text() or "" for page in reader.pages]).strip()
+
+        if not extracted_text:
+            raise HTTPException(status_code=400, detail="PDF se text extract nahi ho saka.")
+
+        prompt = f"""
+        You are an elite technical hiring expert and career mentor.
+        Evaluate this candidate resume against the given target job description with rigorous accuracy.
+
+        Candidate Resume Content:
+        {extracted_text}
+
+        Target Job Description:
+        {job_description}
+
+        Calculate an objective match_percentage (0 to 100) reflecting how closely candidate skills fulfill the job requirements.
+        Return ONLY a raw valid JSON object with this exact structure:
+        {{
+            "candidate_skills": ["extracted real skills from resume"],
+            "required_skills": ["actual requirements from job description"],
+            "missing_skills": ["skills required by the job that are absent in resume"],
+            "match_percentage": 78,
+            "learning_roadmap": [
+                "Week 1: Fundamentals of missing skills",
+                "Week 1: Practice real-world coding problems",
+                "Week 2: Build intermediate feature projects",
+                "Week 2: Version control integration & deployment"
+            ],
+            "recommended_project": {{
+                "title": "Clear Project Title",
+                "description": "High-impact portfolio project covering candidate's missing skills"
+            }},
+            "resume_feedback": [
+                "Concrete tip 1 on metrics and achievements",
+                "Concrete tip 2 on formatting or structure"
+            ],
+            "interview_prep_questions": [
+                "Targeted technical interview question 1",
+                "Targeted technical interview question 2",
+                "Targeted scenario/coding question 3"
+            ]
+        }}
+        """
+
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json"
+            )
+        )
+
+        return {
+            "filename": file.filename,
+            "ai_analysis": json.loads(response.text)
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/evaluate-answer")
+async def evaluate_answer(req: AnswerEvaluationRequest):
+    if not client:
+        raise HTTPException(status_code=500, detail="GEMINI_API_KEY missing")
+
+    try:
+        prompt = f"""
+        Evaluate this candidate's interview answer accurately:
+        Question: {req.question}
+        Candidate Answer: {req.user_answer}
+
+        Return ONLY a valid JSON object:
+        {{
+            "score": 8,
+            "feedback": "2-3 precise sentences grading correctness and depth",
+            "ideal_answer_hint": "Key architectural/logical points expected for a perfect score"
+        }}
+        """
+
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json"
+            )
+        )
+
+        return {"evaluation": json.loads(response.text)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
