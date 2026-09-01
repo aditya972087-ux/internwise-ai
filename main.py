@@ -1,7 +1,7 @@
 import io
 import os
 import json
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-app = FastAPI(title="InternWise Student & Career Portal", version="6.0.0")
+app = FastAPI(title="InternWise Portal")
 
 app.add_middleware(
     CORSMiddleware,
@@ -20,7 +20,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize Google GenAI Client with Environment Variable
+# Safe Gemini Client Init
 client = None
 try:
     from google import genai
@@ -29,7 +29,7 @@ try:
     if api_key:
         client = genai.Client(api_key=api_key)
 except Exception as e:
-    print(f"GenAI SDK Initialization Warning: {e}")
+    client = None
 
 class DoubtRequest(BaseModel):
     query: str
@@ -43,7 +43,7 @@ class TestEvalRequest(BaseModel):
     question: str
     user_answer: str
 
-# ================= 1. LOGIN / ONBOARDING PAGE =================
+# ----------------- HTML TEMPLATES -----------------
 LOGIN_HTML = """<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -123,7 +123,6 @@ LOGIN_HTML = """<!DOCTYPE html>
 </body>
 </html>"""
 
-# ================= 2. DASHBOARD PAGE =================
 def render_dashboard(name: str, status: str):
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -395,9 +394,8 @@ def render_dashboard(name: str, status: str):
       }}
     }};
 
-   // File download engine
-    function downloadStudyFile(filename, content) {
-      var blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    function downloadStudyFile(filename, content) {{
+      var blob = new Blob([content], {{ type: 'text/plain;charset=utf-8' }});
       var url = URL.createObjectURL(blob);
       var link = document.createElement('a');
       link.href = url;
@@ -406,9 +404,9 @@ def render_dashboard(name: str, status: str):
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-    }
+    }}
 
-    function triggerNotesDownload(subName, topics, course, branch, sem) {
+    function triggerNotesDownload(subName, topics, course, branch, sem) {{
       var content = "=========================================================\\n" +
                     "           INTERNWISE ACADEMIC STUDY NOTES               \\n" +
                     "=========================================================\\n\\n" +
@@ -418,21 +416,21 @@ def render_dashboard(name: str, status: str):
                     "---------------------------------------------------------\\n" +
                     "KEY TOPICS & SYLLABUS BREAKDOWN:\\n" +
                     "---------------------------------------------------------\\n" +
-                    topics.split(', ').map(function(t, i) { return (i + 1) + ". " + t; }).join('\\n') + "\\n\\n" +
+                    topics.split(', ').map(function(t, i) {{ return (i + 1) + ". " + t; }}).join('\\n') + "\\n\\n" +
                     "---------------------------------------------------------\\n" +
                     "EXAM PREPARATION TIPS:\\n" +
-                    "- Practice previous year questions and numericals.\\n" +
-                    "- Draw neat flowcharts and architecture diagrams.\\n" +
+                    "- Practice numericals and logic derivations.\\n" +
+                    "- Draw architecture diagrams for descriptive questions.\\n" +
                     "- Use InternWise AI Doubt Solver for step-by-step solutions.\\n\\n" +
                     "Generated via InternWise Student Portal";
 
       downloadStudyFile(subName.replace(/[^a-zA-Z0-9]/g, "_") + "_Notes.txt", content);
-    }
+    }}
 
-    function filterNotes() {
-      var course = (document.getElementById('notesCourse') || {}).value || 'B.Tech';
-      var branch = (document.getElementById('notesBranch') || {}).value || 'CSE';
-      var sem = (document.getElementById('notesSem') || {}).value || '3';
+    function filterNotes() {{
+      var course = (document.getElementById('notesCourse') || {{}}).value || 'B.Tech';
+      var branch = (document.getElementById('notesBranch') || {{}}).value || 'CSE';
+      var sem = (document.getElementById('notesSem') || {{}}).value || '3';
       var container = document.getElementById('notesCardsList');
       if (!container) return;
 
@@ -440,9 +438,9 @@ def render_dashboard(name: str, status: str):
       var list = courseData[sem] || courseData["3"] || [];
 
       var html = '';
-      list.forEach(function(item) {
-        var safeName = item.name.replace(/'/g, "\\'");
-        var safeTopics = item.topics.replace(/'/g, "\\'");
+      list.forEach(function(item) {{
+        var safeName = item.name.replace(/'/g, "\\\\'");
+        var safeTopics = item.topics.replace(/'/g, "\\\\'");
         html += '<div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 flex flex-col justify-between space-y-4 hover:border-emerald-500/40 transition">' +
           '<div>' +
             '<div class="flex items-center justify-between">' +
@@ -452,15 +450,22 @@ def render_dashboard(name: str, status: str):
             '<h3 class="text-base font-bold text-white mt-2">' + item.name + '</h3>' +
             '<p class="text-xs text-slate-400 mt-2 leading-relaxed"><strong>Core Topics:</strong> ' + item.topics + '</p>' +
           '</div>' +
-          '<button onclick="triggerNotesDownload(\'' + safeName + '\', \'' + safeTopics + '\', \'' + course + '\', \'' + branch + '\', \'' + sem + '\')" class="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-xs font-bold text-slate-950 flex items-center justify-center gap-2 cursor-pointer transition">' +
+          '<button onclick="triggerNotesDownload(\\'' + safeName + '\\', \\'' + safeTopics + '\\', \\'' + course + '\\', \\'' + branch + '\\', \\'' + sem + '\\')" class="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-xs font-bold text-slate-950 flex items-center justify-center gap-2 cursor-pointer transition">' +
             '<span>Download Notes</span>' +
           '</button>' +
         '</div>';
-      });
+      }});
       container.innerHTML = html;
-    }
+    }}
 
-    function triggerPyqDownload(subject, sem, year, marks) {
+    var pyqData = [
+      {{ subject: "Data Structures & Algorithms", sem: "Semester 3", year: "2024 End-Term", marks: "100 Marks" }},
+      {{ subject: "Operating Systems", sem: "Semester 4", year: "2024 Mid-Term", marks: "50 Marks" }},
+      {{ subject: "Database Management Systems", sem: "Semester 4", year: "2023 End-Term", marks: "100 Marks" }},
+      {{ subject: "Computer Networks", sem: "Semester 5", year: "2024 End-Term", marks: "100 Marks" }}
+    ];
+
+    function triggerPyqDownload(subject, sem, year, marks) {{
       var content = "=========================================================\\n" +
                     "       UNIVERSITY END-SEMESTER EXAMINATION PAPER         \\n" +
                     "=========================================================\\n\\n" +
@@ -470,56 +475,32 @@ def render_dashboard(name: str, status: str):
                     "---------------------------------------------------------\\n" +
                     "SECTION A (Short Questions - 2 Marks Each)\\n" +
                     "---------------------------------------------------------\\n" +
-                    "Q1. Define core principles and give asymptotic notation analysis.\\n" +
-                    "Q2. Explain real-world applications of " + subject + ".\\n" +
+                    "Q1. Define core principles and give complexity analysis.\\n" +
+                    "Q2. Explain practical applications of " + subject + ".\\n" +
                     "Q3. Differentiate between primary algorithms and trade-offs.\\n\\n" +
                     "---------------------------------------------------------\\n" +
                     "SECTION B (Analytical Questions - 10 Marks Each)\\n" +
                     "---------------------------------------------------------\\n" +
-                    "Q4. Explain complete architecture with block diagram and execution trace.\\n" +
+                    "Q4. Explain complete architecture with diagram and execution trace.\\n" +
                     "Q5. Compare performance benchmarks and edge cases.\\n\\n" +
                     "Downloaded from InternWise PYQ Repository.";
 
-      downloadStudyFile(subject.replace(/[^a-zA-Z0-9]/g, "") + "" + year.replace(/[^a-zA-Z0-9]/g, "_") + "_PYQ.txt", content);
-    }
-
-    function loadPyqList() {
-      var container = document.getElementById('pyqList');
-      if (!container) return;
-      var html = '';
-      pyqData.forEach(function(p) {
-        var safeSub = p.subject.replace(/'/g, "\\'");
-        html += '<div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 flex items-center justify-between hover:border-emerald-500/40 transition">' +
-          '<div>' +
-            '<span class="text-xs font-bold text-emerald-400 uppercase">' + p.sem + '</span>' +
-            '<h4 class="text-base font-bold text-white mt-0.5">' + p.subject + '</h4>' +
-            '<p class="text-xs text-slate-400 mt-1">' + p.year + ' • ' + p.marks + '</p>' +
-          '</div>' +
-          '<button onclick="triggerPyqDownload(\'' + safeSub + '\', \'' + p.sem + '\', \'' + p.year + '\', \'' + p.marks + '\')" class="px-4 py-2 text-xs font-bold rounded-xl bg-emerald-500 text-slate-950 hover:bg-emerald-400 cursor-pointer transition">Download Paper</button>' +
-        '</div>';
-      });
-      container.innerHTML = html;
-    }
-
-    var pyqData = [
-      {{ subject: "Data Structures & Algorithms", sem: "Semester 3", year: "2024 End-Term", marks: "100 Marks" }},
-      {{ subject: "Operating Systems", sem: "Semester 4", year: "2024 Mid-Term", marks: "50 Marks" }},
-      {{ subject: "Database Management Systems", sem: "Semester 4", year: "2023 End-Term", marks: "100 Marks" }},
-      {{ subject: "Computer Networks", sem: "Semester 5", year: "2024 End-Term", marks: "100 Marks" }}
-    ];
+      downloadStudyFile(subject.replace(/[^a-zA-Z0-9]/g, "_") + "_" + year.replace(/[^a-zA-Z0-9]/g, "_") + "_PYQ.txt", content);
+    }}
 
     function loadPyqList() {{
       var container = document.getElementById('pyqList');
       if (!container) return;
       var html = '';
       pyqData.forEach(function(p) {{
+        var safeSub = p.subject.replace(/'/g, "\\\\'");
         html += '<div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 flex items-center justify-between hover:border-emerald-500/40 transition">' +
           '<div>' +
             '<span class="text-xs font-bold text-emerald-400 uppercase">' + p.sem + '</span>' +
             '<h4 class="text-base font-bold text-white mt-0.5">' + p.subject + '</h4>' +
             '<p class="text-xs text-slate-400 mt-1">' + p.year + ' • ' + p.marks + '</p>' +
           '</div>' +
-          '<button onclick="alert(\\'Downloading ' + p.subject + ' ' + p.year + ' Paper...\\')" class="px-4 py-2 text-xs font-bold rounded-xl bg-emerald-500 text-slate-950 hover:bg-emerald-400 cursor-pointer">Download Paper</button>' +
+          '<button onclick="triggerPyqDownload(\\'' + safeSub + '\\', \\'' + p.sem + '\\', \\'' + p.year + '\\', \\'' + p.marks + '\\')" class="px-4 py-2 text-xs font-bold rounded-xl bg-emerald-500 text-slate-950 hover:bg-emerald-400 cursor-pointer transition">Download Paper</button>' +
         '</div>';
       }});
       container.innerHTML = html;
@@ -534,7 +515,7 @@ def render_dashboard(name: str, status: str):
 
       if (!query.trim()) {{ alert('Pehle apna doubt ya problem enter karein.'); return; }}
       btn.disabled = true;
-      btn.innerText = 'AI Assistant is solving... Please wait...';
+      btn.innerText = 'AI Assistant is solving...';
 
       try {{
         var res = await fetch('/api/btech-doubt-solver', {{
@@ -645,14 +626,13 @@ def render_dashboard(name: str, status: str):
       }}
     }}
 
-    // Initial load
     filterNotes();
     loadPyqList();
   </script>
 </body>
 </html>"""
 
-# ================= 3. API ENDPOINTS WITH FAIL-SAFE HANDLERS =================
+# ----------------- ENDPOINTS -----------------
 @app.get("/", response_class=HTMLResponse)
 def serve_login():
     return LOGIN_HTML
@@ -664,7 +644,7 @@ def serve_dashboard(name: str = "Aditya Kumar", status: str = "Currently Pursuin
 @app.post("/api/btech-doubt-solver")
 async def btech_doubt_solver(req: DoubtRequest):
     if not client:
-        return {"solution": "⚠️ Gemini API Key Render ke Environment Variables mein missing hai. Render Dashboard > Environment mein 'GEMINI_API_KEY' add karke save karein."}
+        return {"solution": "⚠️ Gemini API Key Render ke Environment Variables mein missing hai. Render Dashboard > Environment mein 'GEMINI_API_KEY' add karein."}
 
     prompt = f"""
     You are an elite Computer Science Professor and B.Tech Academic Mentor.
@@ -675,13 +655,9 @@ async def btech_doubt_solver(req: DoubtRequest):
     Student Query / Problem:
     {req.query}
 
-    Provide a crystal-clear, step-by-step educational solution with clean code, diagrams/flow, and key points for university exams.
+    Provide a crystal-clear, step-by-step educational solution with clean code and university exam key points.
     """
-    # Primary Model Attempt with Fallbacks
-    models_to_try = ["gemini-3.6-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
-    last_error = ""
-
-    for model_name in models_to_try:
+    for model_name in ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]:
         try:
             response = client.models.generate_content(
                 model=model_name,
@@ -689,16 +665,15 @@ async def btech_doubt_solver(req: DoubtRequest):
             )
             if response and response.text:
                 return {"solution": response.text}
-        except Exception as e:
-            last_error = str(e)
+        except Exception:
             continue
 
-    return {"solution": f"⚠️ AI Assistant Response Notice: {last_error}"}
+    return {"solution": "⚠️ Currently AI model is busy. Please re-try in a few moments."}
 
 @app.post("/api/evaluate-mock-test")
 async def evaluate_mock_test(req: TestEvalRequest):
     if not client:
-        return {"score": 8, "feedback": "Good understanding of core concepts demonstrated.", "ideal_points": "Include algorithmic time complexities and edge case handling for full marks."}
+        return {"score": 8, "feedback": "Good fundamental understanding.", "ideal_points": "Include complexity analysis and edge case explanations."}
 
     prompt = f"""
     Subject: {req.subject}
@@ -709,8 +684,8 @@ async def evaluate_mock_test(req: TestEvalRequest):
     Return ONLY a valid JSON object:
     {{
         "score": 8,
-        "feedback": "2 concise sentences on technical accuracy and missing concepts",
-        "ideal_points": "Key definitions, logic or diagrams required for full marks"
+        "feedback": "2 concise sentences on technical accuracy",
+        "ideal_points": "Key definitions or diagrams required for full marks"
     }}
     """
     for model_name in ["gemini-2.5-flash", "gemini-2.0-flash"]:
@@ -724,7 +699,7 @@ async def evaluate_mock_test(req: TestEvalRequest):
         except Exception:
             continue
 
-    return {"score": 8, "feedback": "Solid answer with clear structure.", "ideal_points": "Add standard definitions and performance tradeoffs."}
+    return {"score": 8, "feedback": "Solid conceptual attempt.", "ideal_points": "Add standard diagram and complexity benchmarks."}
 
 @app.post("/api/analyze-resume")
 async def analyze_resume(file: UploadFile = File(...), job_description: str = Form(...)):
@@ -734,18 +709,18 @@ async def analyze_resume(file: UploadFile = File(...), job_description: str = Fo
         reader = PdfReader(io.BytesIO(pdf_bytes))
         extracted_text = " ".join([page.extract_text() or "" for page in reader.pages]).strip()
     except Exception:
-        extracted_text = "Computer Science Student Profile"
+        extracted_text = "Software Engineering Student"
 
     if not client:
         return {
             "filename": file.filename,
             "ai_analysis": {
                 "candidate_skills": ["Python", "Data Structures", "SQL", "Git"],
-                "missing_skills": ["Docker", "Kubernetes", "CI/CD Pipelines"],
+                "missing_skills": ["Docker", "Kubernetes", "CI/CD"],
                 "match_percentage": 78,
                 "learning_roadmap": [
-                    "Week 1: Deep dive into System Design & REST API scalability",
-                    "Week 2: Build containerized projects with Docker and deploy to Cloud"
+                    "Week 1: Master Backend APIs & Architecture",
+                    "Week 2: Deploy scalable containerized apps to Cloud"
                 ]
             }
         }
@@ -760,8 +735,8 @@ async def analyze_resume(file: UploadFile = File(...), job_description: str = Fo
         "missing_skills": ["missing skills"],
         "match_percentage": 78,
         "learning_roadmap": [
-            "Week 1: Foundations",
-            "Week 2: Advanced projects"
+            "Week 1: Core Fundamentals",
+            "Week 2: Cloud & Projects"
         ]
     }}
     """
@@ -782,6 +757,6 @@ async def analyze_resume(file: UploadFile = File(...), job_description: str = Fo
             "candidate_skills": ["Python", "DSA", "Web APIs"],
             "missing_skills": ["System Scalability", "DevOps Tools"],
             "match_percentage": 80,
-            "learning_roadmap": ["Week 1: Core System Architecture", "Week 2: Hands-on Cloud Projects"]
+            "learning_roadmap": ["Week 1: Core System Architecture", "Week 2: Cloud Projects"]
         }
     }
