@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-app = FastAPI(title="InternWise Student & Career Portal", version="3.0.0")
+app = FastAPI(title="InternWise Student & Career Portal", version="3.1.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -48,7 +48,7 @@ HTML_PAGE = """<!DOCTYPE html>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     body { font-family: 'Plus Jakarta Sans', sans-serif; }
-    .tab-btn.active { background: linear-gradient(135deg, #10b981, #059669); color: #022c22; font-weight: 800; shadow: 0 4px 14px 0 rgba(16, 185, 129, 0.39); }
+    .tab-btn.active { background: linear-gradient(135deg, #10b981, #059669); color: #022c22; font-weight: 800; }
   </style>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen">
@@ -57,7 +57,7 @@ HTML_PAGE = """<!DOCTYPE html>
   <div id="onboardingScreen" class="min-h-screen flex items-center justify-center p-4">
     <div class="max-w-xl w-full bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-10 shadow-2xl space-y-6">
       
-      <!-- Brand Logo in Onboarding -->
+      <!-- Brand Header -->
       <div class="text-center space-y-2">
         <div class="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-500/30 text-slate-950">
           <svg class="w-8 h-8 text-slate-950" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -75,27 +75,28 @@ HTML_PAGE = """<!DOCTYPE html>
         <p class="text-xs text-slate-400">Fill your details once to personalize your study notes, mock tests & career AI.</p>
       </div>
 
-      <form id="onboardingForm" onsubmit="handleOnboarding(event)" class="space-y-4">
+      <!-- Registration Form Container (div-based to prevent page refresh) -->
+      <div id="onboardingForm" class="space-y-4">
         <div>
           <label class="block text-xs font-semibold text-slate-300 mb-1">Full Name *</label>
-          <input type="text" id="userName" required placeholder="e.g. Rahul Sharma" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs sm:text-sm text-white focus:border-emerald-500 focus:outline-none" />
+          <input type="text" id="userName" placeholder="e.g. Rahul Sharma" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs sm:text-sm text-white focus:border-emerald-500 focus:outline-none" />
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="block text-xs font-semibold text-slate-300 mb-1">Email Address *</label>
-            <input type="email" id="userEmail" required placeholder="rahul@example.com" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs sm:text-sm text-white focus:border-emerald-500 focus:outline-none" />
+            <input type="email" id="userEmail" placeholder="rahul@example.com" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs sm:text-sm text-white focus:border-emerald-500 focus:outline-none" />
           </div>
           <div>
             <label class="block text-xs font-semibold text-slate-300 mb-1">Mobile Number *</label>
-            <input type="tel" id="userPhone" required placeholder="+91 9876543210" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs sm:text-sm text-white focus:border-emerald-500 focus:outline-none" />
+            <input type="tel" id="userPhone" placeholder="+91 9876543210" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs sm:text-sm text-white focus:border-emerald-500 focus:outline-none" />
           </div>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="block text-xs font-semibold text-slate-300 mb-1">Gender *</label>
-            <select id="userGender" required class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs sm:text-sm text-white focus:border-emerald-500 focus:outline-none">
+            <select id="userGender" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs sm:text-sm text-white focus:border-emerald-500 focus:outline-none">
               <option value="Male">Male</option>
               <option value="Female">Female</option>
               <option value="Other">Other</option>
@@ -103,24 +104,24 @@ HTML_PAGE = """<!DOCTYPE html>
           </div>
           <div>
             <label class="block text-xs font-semibold text-slate-300 mb-1">Age *</label>
-            <input type="number" id="userAge" min="14" max="70" required placeholder="e.g. 20" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs sm:text-sm text-white focus:border-emerald-500 focus:outline-none" />
+            <input type="number" id="userAge" min="14" max="70" placeholder="e.g. 20" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs sm:text-sm text-white focus:border-emerald-500 focus:outline-none" />
           </div>
         </div>
 
         <div>
           <label class="block text-xs font-semibold text-slate-300 mb-1">Academic Status *</label>
-          <select id="userStatus" required class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs sm:text-sm text-emerald-400 font-semibold focus:border-emerald-500 focus:outline-none">
-            <option value="Currently Pursuing B.Tech">Currently Pursuing B.Tech / BE</option>
+          <select id="userStatus" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs sm:text-sm text-emerald-400 font-semibold focus:border-emerald-500 focus:outline-none">
+            <option value="Currently Pursuing B.Tech / BE">Currently Pursuing B.Tech / BE</option>
             <option value="Currently Pursuing BCA / MCA">Currently Pursuing BCA / MCA</option>
             <option value="Currently Pursuing Diploma">Currently Pursuing Diploma / Polytechnic</option>
-            <option value="Completed Degree / Job Seeking">Completed Course / Graduate</option>
+            <option value="Completed Degree / Graduate">Completed Course / Graduate</option>
           </select>
         </div>
 
-        <button type="submit" class="w-full py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-sm transition shadow-lg shadow-emerald-500/20 cursor-pointer">
+        <button type="button" onclick="handleOnboardingManual()" class="w-full py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-sm transition shadow-lg shadow-emerald-500/20 cursor-pointer">
           Enter InternWise Portal &rarr;
         </button>
-      </form>
+      </div>
     </div>
   </div>
 
@@ -143,7 +144,7 @@ HTML_PAGE = """<!DOCTYPE html>
             <h1 class="text-2xl font-black tracking-tight">Intern<span class="text-emerald-400">Wise</span></h1>
             <span class="px-2 py-0.5 text-[10px] font-bold rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">PRO</span>
           </div>
-          <p class="text-xs text-slate-400">Hello, <strong id="greetingName" class="text-white">Student</strong> (<span id="greetingStatus" class="text-emerald-400">B.Tech</span>)</p>
+          <p class="text-xs text-slate-400">Welcome, <strong id="greetingName" class="text-white">Student</strong> (<span id="greetingStatus" class="text-emerald-400">B.Tech</span>)</p>
         </div>
       </div>
 
@@ -157,7 +158,7 @@ HTML_PAGE = """<!DOCTYPE html>
           <button onclick="switchTab('career')" id="tab-career" class="tab-btn px-3 sm:px-4 py-2 rounded-xl text-slate-300 hover:text-white transition">Job & Career</button>
         </nav>
         
-        <button onclick="logoutProfile()" title="Change Profile" class="p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-white text-xs">
+        <button onclick="logoutProfile()" title="Change Profile" class="p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-white text-xs cursor-pointer">
           &#x21bb; Switch
         </button>
       </div>
@@ -169,7 +170,7 @@ HTML_PAGE = """<!DOCTYPE html>
       <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-6">
         <div>
           <h2 class="text-xl font-bold text-white">Academic Notes & Syllabus Finder</h2>
-          <p class="text-xs text-slate-400 mt-1">Select your exact course, engineering branch, and semester to view personalized study notes.</p>
+          <p class="text-xs text-slate-400 mt-1">Select your exact course, engineering branch, and semester to view verified study notes.</p>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -217,7 +218,7 @@ HTML_PAGE = """<!DOCTYPE html>
     <section id="section-doubt" class="hidden space-y-6">
       <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-5">
         <div>
-          <h2 class="text-xl font-bold text-white">B.Tech 24/7 AI Problem & Doubt Assistant</h2>
+          <h2 class="text-xl font-bold text-white">24/7 AI Problem & Doubt Assistant</h2>
           <p class="text-xs text-slate-400 mt-1">Get instant step-by-step solutions, code debugging, and concept clarity tailored to your syllabus.</p>
         </div>
 
@@ -243,11 +244,9 @@ HTML_PAGE = """<!DOCTYPE html>
 
     <!-- ================= 3. PREVIOUS YEAR PAPERS (PYQ) ================= -->
     <section id="section-pyq" class="hidden space-y-6">
-      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h2 class="text-xl font-bold text-white">Previous Year Question Papers (PYQs)</h2>
-          <p class="text-xs text-slate-400">Download and solve past university exam question papers</p>
-        </div>
+      <div>
+        <h2 class="text-xl font-bold text-white">Previous Year Question Papers (PYQs)</h2>
+        <p class="text-xs text-slate-400">Download and solve past university exam question papers</p>
       </div>
       <div id="pyqList" class="grid grid-cols-1 md:grid-cols-2 gap-5"></div>
     </section>
@@ -269,14 +268,14 @@ HTML_PAGE = """<!DOCTYPE html>
             <option value="Computer Networks">Computer Networks (CN)</option>
             <option value="Theory of Computation">Theory of Computation (TOC)</option>
           </select>
-          <button onclick="generateMockQ()" class="px-6 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-100 text-sm font-bold border border-slate-700">Generate Question</button>
+          <button onclick="generateMockQ()" class="px-6 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-100 text-sm font-bold border border-slate-700 cursor-pointer">Generate Question</button>
         </div>
 
         <div id="mockQuestionArea" class="hidden bg-slate-950 p-5 rounded-2xl border border-slate-800 space-y-4">
           <span class="text-xs font-bold text-emerald-400 uppercase tracking-wide">University Standard Question:</span>
           <p id="mockQuestionText" class="text-sm font-semibold text-white"></p>
           <textarea id="mockUserAns" rows="4" placeholder="Write your complete technical answer here..." class="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs sm:text-sm text-slate-200 focus:border-emerald-500 focus:outline-none"></textarea>
-          <button onclick="submitMockGrading()" id="mockGradingBtn" class="px-5 py-2.5 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs hover:bg-emerald-400">Evaluate My Answer</button>
+          <button onclick="submitMockGrading()" id="mockGradingBtn" class="px-5 py-2.5 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs hover:bg-emerald-400 cursor-pointer">Evaluate My Answer</button>
         </div>
 
         <div id="mockEvaluationResult" class="hidden p-5 rounded-2xl bg-slate-950 border border-slate-800 text-sm space-y-2"></div>
@@ -303,7 +302,7 @@ HTML_PAGE = """<!DOCTYPE html>
             <textarea id="jobDescription" rows="3" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs sm:text-sm text-slate-200 focus:border-emerald-500 focus:outline-none resize-none">Looking for a Software Development Engineer (SDE) Intern with proficiency in Python/Java, Data Structures, SQL/DBMS, and Git.</textarea>
           </div>
 
-          <button type="button" id="careerAnalyzeBtn" onclick="runResumeAnalysis()" class="w-full py-3.5 rounded-xl font-bold bg-emerald-500 text-slate-950 hover:bg-emerald-400 transition text-sm">
+          <button type="button" id="careerAnalyzeBtn" onclick="runResumeAnalysis()" class="w-full py-3.5 rounded-xl font-bold bg-emerald-500 text-slate-950 hover:bg-emerald-400 transition text-sm cursor-pointer">
             Analyze Resume Match with AI
           </button>
         </div>
@@ -344,28 +343,55 @@ HTML_PAGE = """<!DOCTYPE html>
     function checkExistingProfile() {
       var savedProfile = localStorage.getItem('internwise_user');
       if (savedProfile) {
-        var user = JSON.parse(savedProfile);
-        document.getElementById('greetingName').textContent = user.name;
-        document.getElementById('greetingStatus').textContent = user.status;
-        document.getElementById('onboardingScreen').classList.add('hidden');
-        document.getElementById('mainDashboard').classList.remove('hidden');
-        filterNotes();
-        loadPyqList();
+        try {
+          var user = JSON.parse(savedProfile);
+          document.getElementById('greetingName').textContent = user.name || 'Student';
+          document.getElementById('greetingStatus').textContent = user.status || 'B.Tech';
+          document.getElementById('onboardingScreen').classList.add('hidden');
+          document.getElementById('mainDashboard').classList.remove('hidden');
+          filterNotes();
+          loadPyqList();
+        } catch (e) {
+          localStorage.removeItem('internwise_user');
+        }
       }
     }
 
-    function handleOnboarding(e) {
-      e.preventDefault();
+    function handleOnboardingManual() {
+      var name = document.getElementById('userName').value.trim();
+      var email = document.getElementById('userEmail').value.trim();
+      var phone = document.getElementById('userPhone').value.trim();
+      var gender = document.getElementById('userGender').value;
+      var age = document.getElementById('userAge').value.trim();
+      var status = document.getElementById('userStatus').value;
+
+      if (!name || !email || !phone || !age) {
+        alert('Kripya sabhi fields (Name, Email, Phone, Age) complete bharein.');
+        return;
+      }
+
       var user = {
-        name: document.getElementById('userName').value,
-        email: document.getElementById('userEmail').value,
-        phone: document.getElementById('userPhone').value,
-        gender: document.getElementById('userGender').value,
-        age: document.getElementById('userAge').value,
-        status: document.getElementById('userStatus').value
+        name: name,
+        email: email,
+        phone: phone,
+        gender: gender,
+        age: age,
+        status: status
       };
-      localStorage.setItem('internwise_user', JSON.stringify(user));
-      checkExistingProfile();
+
+      try {
+        localStorage.setItem('internwise_user', JSON.stringify(user));
+      } catch (err) {
+        console.error('LocalStorage error:', err);
+      }
+
+      document.getElementById('greetingName').textContent = user.name;
+      document.getElementById('greetingStatus').textContent = user.status;
+      document.getElementById('onboardingScreen').classList.add('hidden');
+      document.getElementById('mainDashboard').classList.remove('hidden');
+
+      filterNotes();
+      loadPyqList();
     }
 
     function logoutProfile() {
@@ -389,42 +415,42 @@ HTML_PAGE = """<!DOCTYPE html>
     var academicDatabase = {
       "B.Tech": {
         "1": [
-          { name: "Engineering Mathematics I", topics: "Linear Algebra, Calculus, Differential Equations", file: "Maths1_Notes.pdf" },
-          { name: "Engineering Physics", topics: "Optics, Lasers, Quantum Theory, Fiber Optics", file: "Physics_Notes.pdf" },
-          { name: "Basic Electrical Engineering", topics: "AC Circuits, DC Network Theorems, Transformers", file: "BEE_Notes.pdf" }
+          { name: "Engineering Mathematics I", topics: "Linear Algebra, Calculus, Differential Equations" },
+          { name: "Engineering Physics", topics: "Optics, Lasers, Quantum Theory, Fiber Optics" },
+          { name: "Basic Electrical Engineering", topics: "AC Circuits, DC Network Theorems, Transformers" }
         ],
         "2": [
-          { name: "Programming in C", topics: "Pointers, DMA, Structures, Recursion, File Handling", file: "C_Programming.pdf" },
-          { name: "Engineering Mathematics II", topics: "Fourier Series, Vector Calculus, Complex Variables", file: "Maths2_Notes.pdf" },
-          { name: "Basic Electronics", topics: "Semiconductors, Diodes, BJT, Op-Amps", file: "Electronics.pdf" }
+          { name: "Programming in C", topics: "Pointers, DMA, Structures, Recursion, File Handling" },
+          { name: "Engineering Mathematics II", topics: "Fourier Series, Vector Calculus, Complex Variables" },
+          { name: "Basic Electronics", topics: "Semiconductors, Diodes, BJT, Op-Amps" }
         ],
         "3": [
-          { name: "Data Structures & Algorithms", topics: "Arrays, Linked Lists, Trees, Graphs, Sorting & Searching", file: "DSA_Notes.pdf" },
-          { name: "Digital Logic & Design (DLD)", topics: "Number Systems, K-Maps, Combinational & Sequential Circuits", file: "DLD_Notes.pdf" },
-          { name: "Discrete Mathematical Structures", topics: "Set Theory, Relations, Group Theory, Recurrences", file: "DiscreteMath.pdf" }
+          { name: "Data Structures & Algorithms", topics: "Arrays, Linked Lists, Trees, Graphs, Sorting & Searching" },
+          { name: "Digital Logic & Design (DLD)", topics: "Number Systems, K-Maps, Combinational & Sequential Circuits" },
+          { name: "Discrete Mathematical Structures", topics: "Set Theory, Relations, Group Theory, Recurrences" }
         ],
         "4": [
-          { name: "Operating Systems (OS)", topics: "Processes, CPU Scheduling, Deadlocks, Memory Management, Linux", file: "OS_Complete.pdf" },
-          { name: "Database Management Systems (DBMS)", topics: "ER Model, Relational Algebra, SQL Queries, Normalization, ACID", file: "DBMS_Notes.pdf" },
-          { name: "Computer Organization & Arch (COA)", topics: "Pipelining, Instruction Formats, Memory Hierarchy, Cache", file: "COA_Notes.pdf" }
+          { name: "Operating Systems (OS)", topics: "Processes, CPU Scheduling, Deadlocks, Memory Management, Linux" },
+          { name: "Database Management Systems (DBMS)", topics: "ER Model, Relational Algebra, SQL Queries, Normalization, ACID" },
+          { name: "Computer Organization & Arch (COA)", topics: "Pipelining, Instruction Formats, Memory Hierarchy, Cache" }
         ],
         "5": [
-          { name: "Design & Analysis of Algorithms (DAA)", topics: "Divide & Conquer, Dynamic Programming, Greedy, NP Completeness", file: "DAA_Notes.pdf" },
-          { name: "Computer Networks (CN)", topics: "OSI vs TCP/IP, IP Addressing, Subnetting, Routing Protocols", file: "CN_Notes.pdf" },
-          { name: "Software Engineering", topics: "Agile Model, SDLC, SRS Documentation, Testing Techniques", file: "SoftwareEngg.pdf" }
+          { name: "Design & Analysis of Algorithms (DAA)", topics: "Divide & Conquer, Dynamic Programming, Greedy, NP Completeness" },
+          { name: "Computer Networks (CN)", topics: "OSI vs TCP/IP, IP Addressing, Subnetting, Routing Protocols" },
+          { name: "Software Engineering", topics: "Agile Model, SDLC, SRS Documentation, Testing Techniques" }
         ],
         "6": [
-          { name: "Compiler Design", topics: "Lexical Analysis, Top-Down/Bottom-Up Parsing, Code Generation", file: "Compiler_Notes.pdf" },
-          { name: "Artificial Intelligence & ML", topics: "State Space Search, Heuristics, Supervised/Unsupervised ML", file: "AIML_Notes.pdf" },
-          { name: "Cloud Computing & DevOps", topics: "Virtualization, AWS Basics, Docker, Kubernetes, CI/CD", file: "Cloud_DevOps.pdf" }
+          { name: "Compiler Design", topics: "Lexical Analysis, Top-Down/Bottom-Up Parsing, Code Generation" },
+          { name: "Artificial Intelligence & ML", topics: "State Space Search, Heuristics, Supervised/Unsupervised ML" },
+          { name: "Cloud Computing & DevOps", topics: "Virtualization, AWS Basics, Docker, Kubernetes, CI/CD" }
         ],
         "7": [
-          { name: "Cybersecurity & Cryptography", topics: "Symmetric/Asymmetric Encryption, RSA, Hashing, Network Attacks", file: "Cybersec.pdf" },
-          { name: "Distributed Systems", topics: "RPC, MapReduce, Consensus Algorithms, Microservices", file: "DistributedSys.pdf" }
+          { name: "Cybersecurity & Cryptography", topics: "Symmetric/Asymmetric Encryption, RSA, Hashing, Network Attacks" },
+          { name: "Distributed Systems", topics: "RPC, MapReduce, Consensus Algorithms, Microservices" }
         ],
         "8": [
-          { name: "Major Project & Viva Preparation", topics: "SRS, Architecture Diagrams, Testing Reports, Code Review", file: "MajorProject_Guide.pdf" },
-          { name: "System Design & Industry Elective", topics: "High-Level Design (HLD), Low-Level Design (LLD), Scalability", file: "SystemDesign.pdf" }
+          { name: "Major Project & Viva Preparation", topics: "SRS, Architecture Diagrams, Testing Reports, Code Review" },
+          { name: "System Design & Scalability", topics: "High-Level Design (HLD), Low-Level Design (LLD), Load Balancing" }
         ]
       }
     };
@@ -447,9 +473,9 @@ HTML_PAGE = """<!DOCTYPE html>
               '<span class="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-300">Verified</span>' +
             '</div>' +
             '<h3 class="text-base font-bold text-white mt-2">' + item.name + '</h3>' +
-            '<p class="text-xs text-slate-400 mt-2 leading-relaxed"><strong>Core Syllabus:</strong> ' + item.topics + '</p>' +
+            '<p class="text-xs text-slate-400 mt-2 leading-relaxed"><strong>Core Topics:</strong> ' + item.topics + '</p>' +
           '</div>' +
-          '<button onclick="alert(\'Downloading verified study notes for ' + item.name + '...\')" class="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 border border-slate-700 flex items-center justify-center gap-2">' +
+          '<button onclick="alert(\'Downloading verified study notes for ' + item.name + '...\')" class="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 border border-slate-700 flex items-center justify-center gap-2 cursor-pointer">' +
             '<span>Download Notes (PDF)</span>' +
           '</button>' +
         '</div>';
@@ -476,7 +502,7 @@ HTML_PAGE = """<!DOCTYPE html>
             '<h4 class="text-base font-bold text-white mt-0.5">' + p.subject + '</h4>' +
             '<p class="text-xs text-slate-400 mt-1">' + p.year + ' • ' + p.marks + '</p>' +
           '</div>' +
-          '<button onclick="alert(\'Downloading ' + p.subject + ' ' + p.year + ' Paper...\')" class="px-4 py-2 text-xs font-bold rounded-xl bg-emerald-500 text-slate-950 hover:bg-emerald-400">Download Paper</button>' +
+          '<button onclick="alert(\'Downloading ' + p.subject + ' ' + p.year + ' Paper...\')" class="px-4 py-2 text-xs font-bold rounded-xl bg-emerald-500 text-slate-950 hover:bg-emerald-400 cursor-pointer">Download Paper</button>' +
         '</div>';
       });
       container.innerHTML = html;
@@ -685,7 +711,7 @@ async def analyze_resume(file: UploadFile = File(...), job_description: str = Fo
             "Week 1: Foundations",
             "Week 2: Advanced projects"
         ]
-    }}cd InternWise\backend
+    }}
     """
     response = client.models.generate_content(
         model="gemini-2.5-flash",
