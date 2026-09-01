@@ -488,23 +488,33 @@ def render_dashboard(name: str, status: str):
       downloadStudyFile(subject.replace(/[^a-zA-Z0-9]/g, "_") + "_" + year.replace(/[^a-zA-Z0-9]/g, "_") + "_PYQ.txt", content);
     }}
 
-    function loadPyqList() {{
-      var container = document.getElementById('pyqList');
-      if (!container) return;
-      var html = '';
-      pyqData.forEach(function(p) {{
-        var safeSub = p.subject.replace(/'/g, "\\\\'");
-        html += '<div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 flex items-center justify-between hover:border-emerald-500/40 transition">' +
-          '<div>' +
-            '<span class="text-xs font-bold text-emerald-400 uppercase">' + p.sem + '</span>' +
-            '<h4 class="text-base font-bold text-white mt-0.5">' + p.subject + '</h4>' +
-            '<p class="text-xs text-slate-400 mt-1">' + p.year + ' • ' + p.marks + '</p>' +
-          '</div>' +
-          '<button onclick="triggerPyqDownload(\\'' + safeSub + '\\', \\'' + p.sem + '\\', \\'' + p.year + '\\', \\'' + p.marks + '\\')" class="px-4 py-2 text-xs font-bold rounded-xl bg-emerald-500 text-slate-950 hover:bg-emerald-400 cursor-pointer transition">Download Paper</button>' +
-        '</div>';
-      }});
-      container.innerHTML = html;
-    }}
+   function downloadStudyFile(filename, content) {
+      var blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+      var url = URL.createObjectURL(blob);
+      var link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+
+    function triggerNotesDownload(subName, topics, course, branch, sem) {
+      var content = "=========================================================\\n" +
+                    "           INTERNWISE ACADEMIC STUDY NOTES               \\n" +
+                    "=========================================================\\n\\n" +
+                    "Subject: " + subName + "\\n" +
+                    "Course : " + course + " (" + branch + ") - Semester " + sem + "\\n" +
+                    "Status : Verified University Curriculum\\n\\n" +
+                    "---------------------------------------------------------\\n" +
+                    "KEY TOPICS & SYLLABUS BREAKDOWN:\\n" +
+                    "---------------------------------------------------------\\n" +
+                    topics.split(', ').map(function(t, i) { return (i + 1) + ". " + t; }).join('\\n') + "\\n\\n" +
+                    "Generated via InternWise Student Portal";
+
+      downloadStudyFile(subName.replace(/[^a-zA-Z0-9]/g, "_") + "_Notes.txt", content);
+    }
 
     async function askDoubtAI() {{
       var query = document.getElementById('askQuery').value;
