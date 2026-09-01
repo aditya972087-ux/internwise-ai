@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-app = FastAPI(title="InternWise Portal", version="10.0.0")
+app = FastAPI(title="InternWise Portal", version="11.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -38,12 +38,19 @@ class DoubtRequest(BaseModel):
     semester: str
     subject: str
 
+class NotesGenRequest(BaseModel):
+    subject: str
+    course: str
+    branch: str
+    semester: str
+    topics: str
+
 class TestEvalRequest(BaseModel):
     subject: str
     question: str
     user_answer: str
 
-# ================= LOGIN / REGISTRATION PAGE =================
+# ================= LOGIN PAGE =================
 LOGIN_HTML = """<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -61,12 +68,12 @@ LOGIN_HTML = """<!DOCTYPE html>
         IW
       </div>
       <h1 class="text-2xl sm:text-3xl font-black tracking-tight">Intern<span class="text-emerald-400">Wise</span></h1>
-      <p class="text-xs text-slate-400">Smart Academic Notes & Career AI Suite</p>
+      <p class="text-xs text-slate-400">Deep Academic & Career Engineering Suite</p>
     </div>
 
     <div class="border-t border-slate-800 pt-4">
       <h2 class="text-base font-bold text-white mb-1">Create Student Profile</h2>
-      <p class="text-xs text-slate-400">Personalize your verified study notes, mock tests & career AI.</p>
+      <p class="text-xs text-slate-400">Personalize comprehensive study notes, mock tests & career AI.</p>
     </div>
 
     <form action="/dashboard" method="GET" class="space-y-4">
@@ -104,7 +111,7 @@ LOGIN_HTML = """<!DOCTYPE html>
 </body>
 </html>"""
 
-# ================= DASHBOARD APP (MOBILE-APP READY) =================
+# ================= DASHBOARD HTML =================
 DASHBOARD_RAW_HTML = """<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -122,7 +129,6 @@ DASHBOARD_RAW_HTML = """<!DOCTYPE html>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen pb-24 md:pb-10">
   <div class="max-w-5xl mx-auto px-4 py-4 md:py-6">
-    <!-- Top Header -->
     <header class="flex items-center justify-between border-b border-slate-800 pb-4 mb-6">
       <div class="flex items-center gap-3">
         <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-500/30 text-slate-950 font-black text-lg">
@@ -137,7 +143,6 @@ DASHBOARD_RAW_HTML = """<!DOCTYPE html>
         </div>
       </div>
       
-      <!-- Desktop Navigation Bar -->
       <nav class="hidden md:flex items-center gap-1 bg-slate-900 p-1 rounded-2xl border border-slate-800 text-xs">
         <button onclick="switchTab('notes')" id="nav-notes" class="nav-btn active px-3.5 py-2 rounded-xl transition cursor-pointer">Notes Hub</button>
         <button onclick="switchTab('doubt')" id="nav-doubt" class="nav-btn px-3.5 py-2 rounded-xl text-slate-300 hover:text-white transition cursor-pointer">AI Doubt Solver</button>
@@ -153,8 +158,8 @@ DASHBOARD_RAW_HTML = """<!DOCTYPE html>
     <section id="tab-content-notes" class="space-y-5">
       <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 space-y-4">
         <div>
-          <h2 class="text-lg font-bold text-white">Syllabus & Verified Study Notes Hub</h2>
-          <p class="text-xs text-slate-400">Download formatted topic-wise university notes directly in PDF.</p>
+          <h2 class="text-lg font-bold text-white">Full-Length Academic Notes & Textbook PDF Engine</h2>
+          <p class="text-xs text-slate-400">Download complete multi-page syllabus, algorithms, code proofs and derivations.</p>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -198,8 +203,8 @@ DASHBOARD_RAW_HTML = """<!DOCTYPE html>
     <section id="tab-content-doubt" class="hidden space-y-5">
       <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 space-y-4">
         <div>
-          <h2 class="text-lg font-bold text-white">24/7 AI Problem & Doubt Solver</h2>
-          <p class="text-xs text-slate-400">Ask any complex theory, algorithm, math derivation or debugging issue.</p>
+          <h2 class="text-lg font-bold text-white">24/7 AI Problem & Proof Solver</h2>
+          <p class="text-xs text-slate-400">Ask any complex theory, algorithm, math derivation or code debugging problem.</p>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
           <input type="text" id="askCourse" placeholder="Course" value="B.Tech" class="bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-200 focus:outline-none" />
@@ -221,12 +226,12 @@ DASHBOARD_RAW_HTML = """<!DOCTYPE html>
     <section id="tab-content-pyq" class="hidden space-y-5">
       <div>
         <h2 class="text-lg font-bold text-white">Previous Year Question Papers (PYQs)</h2>
-        <p class="text-xs text-slate-400">Download real examination papers with solution blueprints in PDF.</p>
+        <p class="text-xs text-slate-400">Download university papers with detailed marking schemes and model solutions.</p>
       </div>
       <div id="pyqList" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
     </section>
 
-    <!-- TAB 4: MOCK TESTS (MOST EXPECTED QUESTIONS) -->
+    <!-- TAB 4: MOCK TESTS -->
     <section id="tab-content-mock" class="hidden space-y-5">
       <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 space-y-4">
         <div>
@@ -258,7 +263,7 @@ DASHBOARD_RAW_HTML = """<!DOCTYPE html>
       </div>
     </section>
 
-    <!-- TAB 5: JOB & CAREER ROADMAP + LIVE OPENINGS -->
+    <!-- TAB 5: JOB & CAREER -->
     <section id="tab-content-career" class="hidden space-y-5">
       <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4">
         <div>
@@ -281,7 +286,6 @@ DASHBOARD_RAW_HTML = """<!DOCTYPE html>
       </div>
 
       <div id="careerResults" class="hidden space-y-5">
-        <!-- Score Card -->
         <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 flex items-center justify-between">
           <div>
             <span class="text-[10px] uppercase font-bold text-slate-400">Candidate Match Score</span>
@@ -290,7 +294,6 @@ DASHBOARD_RAW_HTML = """<!DOCTYPE html>
           <div class="text-3xl sm:text-4xl font-black text-emerald-400" id="careerMatchScore">--%</div>
         </div>
 
-        <!-- Strengths vs Weaknesses -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
             <h4 class="text-xs font-bold text-emerald-400 uppercase mb-2">Your Strengths (Detected Skills)</h4>
@@ -302,13 +305,11 @@ DASHBOARD_RAW_HTML = """<!DOCTYPE html>
           </div>
         </div>
 
-        <!-- 2-Week Personalized Roadmap -->
         <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 space-y-3">
           <h4 class="text-sm font-bold text-emerald-400">2-Week Personalized Skill Upgrade Roadmap</h4>
           <div id="careerRoadmap" class="space-y-2 text-xs sm:text-sm text-slate-300"></div>
         </div>
 
-        <!-- Live Internship & Job Opportunities -->
         <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 space-y-3">
           <h4 class="text-sm font-bold text-white flex items-center gap-2">
             <span>Recommended Job & Internship Openings</span>
@@ -320,7 +321,6 @@ DASHBOARD_RAW_HTML = """<!DOCTYPE html>
     </section>
   </div>
 
-  <!-- Bottom Mobile Navigation Bar -->
   <div class="md:hidden fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 px-3 py-2 flex justify-around items-center z-50">
     <button onclick="switchTab('notes')" id="bot-notes" class="bottom-nav-btn active flex flex-col items-center gap-1 text-[10px] text-slate-400">
       <span>Notes</span>
@@ -422,127 +422,112 @@ DASHBOARD_RAW_HTML = """<!DOCTYPE html>
       }
     };
 
-    var comprehensiveStudyRepo = {
-      "Data Structures & Algorithms (DSA)": [
-        {
-          unit: "UNIT 1: Linear Data Structures (Arrays, Stacks, Queues)",
-          theory: "• Arrays: Contiguous memory allocation, O(1) random indexing using [Base_Address + i * size]. Tradeoff: Static capacity, costly insertion and deletion O(N).\\n• Stacks (LIFO Principle): Push, Pop, Peek operations run in O(1). Applications: Expression evaluation (Infix to Postfix), Function call stack, Depth-First Search.\\n• Queues (FIFO Principle): Modulo arithmetic in Circular Queue: (rear + 1) % Capacity to prevent space wastage. Priority Queue is implemented using Binary Max/Min Heap."
-        },
-        {
-          unit: "UNIT 2: Dynamic Linked Lists & Non-Linear Trees",
-          theory: "• Linked Lists: Singly, Doubly, and Circular Linked Lists with dynamic pointer allocations (Node -> Data | Next). O(1) insertion at head without contiguous memory requirement.\\n• Binary Search Trees (BST): Left child < Root <= Right child. Inorder traversal yields sorted elements. AVL Trees maintain balance factor {-1, 0, 1} through LL, RR, LR, RL rotations."
-        },
-        {
-          unit: "UNIT 3: Graph Algorithms & Asymptotic Complexity",
-          theory: "• Representations: Adjacency Matrix O(V^2) vs Adjacency List O(V + E).\\n• Traversals: BFS uses Queue for shortest path in unweighted graphs; DFS uses Recursion/Stack for topological sorting and cycle detection.\\n• Sorting Comparisons: QuickSort (Average O(N log N), Worst O(N^2) on sorted pivot), MergeSort (Guaranteed O(N log N) with O(N) auxiliary space)."
-        }
-      ],
-      "Digital Logic & Design (DLD)": [
-        {
-          unit: "UNIT 1: Boolean Algebra & Karnaugh Maps (K-Maps)",
-          theory: "• Boolean Axioms, De Morgan's Theorems, Standard SOP and POS Canonical forms.\\n• 4-Variable K-Map reduction using Gray code adjacency to eliminate static and dynamic hazards."
-        },
-        {
-          unit: "UNIT 2: Combinational & Sequential Logic Circuits",
-          theory: "• Combinational: Multiplexers (MUX as universal function generator), Decoders, Encoders, Half/Full Adders.\\n• Sequential: Latches vs Edge-Triggered Flip-Flops (SR, JK, D, T). Race-around condition in JK resolved by Master-Slave configuration."
-        }
-      ],
-      "Operating Systems (OS)": [
-        {
-          unit: "UNIT 1: Process Management & CPU Scheduling",
-          theory: "• Process Control Block (PCB): Context switching overhead. Scheduling: FCFS (Convoy Effect), SJF (Provably optimal average wait time), Round Robin (Time quantum selection balance).\\n• Deadlock: 4 Coffman conditions (Mutual Exclusion, Hold & Wait, No Preemption, Circular Wait). Banker's Algorithm prevents unsafe state transitions."
-        },
-        {
-          unit: "UNIT 2: Virtual Memory Management & Paging",
-          theory: "• Paging: Eliminates external fragmentation using Page Tables and TLB (Translation Lookaside Buffer).\\n• Page Replacement: FIFO, Optimal (Belady's Anomaly avoidance), and LRU (Least Recently Used) algorithms."
-        }
-      ]
-    };
-
-    // Client-side PDF Generator using jsPDF
-    function generateAndDownloadPDF(filename, title, subHeader, sections) {
+    // Multi-page PDF Generator with automatic pagination and margins
+    function generateMultiPagePDF(filename, title, subHeader, unitsList) {
       if (!window.jspdf || !window.jspdf.jsPDF) {
-        alert("PDF engine loading, please retry in 2 seconds.");
+        alert("PDF generator initializing, please try again in 2 seconds.");
         return;
       }
       var doc = new window.jspdf.jsPDF();
+      var pageWidth = 210;
+      var margin = 14;
+      var maxLineWidth = pageWidth - (margin * 2);
 
+      // Cover / Header Banner
       doc.setFillColor(15, 23, 42);
-      doc.rect(0, 0, 210, 28, 'F');
+      doc.rect(0, 0, pageWidth, 28, 'F');
 
       doc.setTextColor(16, 185, 129);
       doc.setFontSize(14);
       doc.setFont("helvetica", "bold");
-      doc.text("INTERNWISE ACADEMIC PORTAL", 14, 13);
+      doc.text("INTERNWISE ACADEMIC MASTERCLASS", margin, 13);
 
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(9);
       doc.setFont("helvetica", "normal");
-      doc.text(subHeader, 14, 21);
+      doc.text(subHeader, margin, 21);
 
       doc.setTextColor(15, 23, 42);
-      doc.setFontSize(13);
+      doc.setFontSize(14);
       doc.setFont("helvetica", "bold");
-      doc.text(title, 14, 38);
+      doc.text(title, margin, 38);
 
-      var yPos = 46;
-      sections.forEach(function(sec) {
-        if (yPos > 260) {
+      var yPos = 48;
+
+      unitsList.forEach(function(unitItem, idx) {
+        if (yPos > 240) {
           doc.addPage();
           yPos = 20;
         }
 
+        // Unit Title Box
+        doc.setFillColor(241, 245, 249);
+        doc.rect(margin, yPos - 5, maxLineWidth, 8, 'F');
         doc.setTextColor(5, 150, 105);
         doc.setFontSize(11);
         doc.setFont("helvetica", "bold");
-        doc.text(sec.heading, 14, yPos);
-        yPos += 6;
+        doc.text(unitItem.title || ("MODULE " + (idx + 1)), margin + 2, yPos);
+        yPos += 9;
 
-        doc.setTextColor(51, 65, 85);
+        // Content
+        doc.setTextColor(30, 41, 59);
         doc.setFontSize(9);
         doc.setFont("helvetica", "normal");
 
-        var splitText = doc.splitTextToSize(sec.body, 180);
-        doc.text(splitText, 14, yPos);
-        yPos += (splitText.length * 4.5) + 6;
+        var lines = doc.splitTextToSize(unitItem.content, maxLineWidth);
+        for (var i = 0; i < lines.length; i++) {
+          if (yPos > 270) {
+            doc.addPage();
+            yPos = 20;
+          }
+          doc.text(lines[i], margin, yPos);
+          yPos += 4.5;
+        }
+        yPos += 6;
       });
 
-      doc.setDrawColor(226, 232, 240);
-      doc.line(14, 280, 196, 280);
-      doc.setFontSize(8);
-      doc.setTextColor(148, 163, 184);
-      doc.text("Verified University Curriculum & Exam Preparation • InternWise Pro", 14, 285);
+      // Add page numbering & footer to all pages
+      var totalPages = doc.internal.getNumberOfPages();
+      for (var p = 1; p <= totalPages; p++) {
+        doc.setPage(p);
+        doc.setDrawColor(226, 232, 240);
+        doc.line(margin, 282, pageWidth - margin, 282);
+        doc.setFontSize(8);
+        doc.setTextColor(148, 163, 184);
+        doc.text("Verified University Syllabus & Exam Prep • InternWise Pro", margin, 287);
+        doc.text("Page " + p + " of " + totalPages, pageWidth - margin - 18, 287);
+      }
 
       doc.save(filename);
     }
 
-    function triggerNotesDownload(subName, topics, course, branch, sem) {
-      var filename = subName.replace(/[^a-zA-Z0-9]/g, "_") + "_Verified_Notes.pdf";
-      var subHeader = course + " (" + branch + ") • Semester " + sem + " Comprehensive Study Notes";
-      
-      var detailedUnits = comprehensiveStudyRepo[subName] || [
-        {
-          unit: "UNIT 1: Core Fundamentals & Theoretical Principles",
-          theory: "• Standard mathematical formulations, architectural definitions, and foundational models of " + subName + ".\\n• Essential derivations and labeled flowcharts required for university 10-mark descriptive questions."
-        },
-        {
-          unit: "UNIT 2: Detailed Syllabus Deep-Dive & Key Modules",
-          theory: topics.split(', ').map(function(t, i) { return "• Module " + (i + 1) + ": Exhaustive breakdown and practical implementations of " + t + "."; }).join('\\n')
-        },
-        {
-          unit: "UNIT 3: University Examination Scoring Strategy",
-          theory: "• Prioritize time complexity derivations, state diagrams, and architectural blueprints.\\n• Use InternWise AI Doubt Solver for step-by-step proofs and code debugging."
+    async function triggerNotesDownload(subName, topics, course, branch, sem, btnId) {
+      var btn = document.getElementById(btnId);
+      var originalText = btn ? btn.innerHTML : '';
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span>Generating Deep Masterclass PDF...</span>';
+      }
+
+      try {
+        var res = await fetch('/api/generate-full-notes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ subject: subName, course: course, branch: branch, semester: sem, topics: topics })
+        });
+        var data = await res.json();
+        var filename = subName.replace(/[^a-zA-Z0-9]/g, "_") + "_Masterclass_Notes.pdf";
+        var subHeader = course + " (" + branch + ") • Semester " + sem + " Comprehensive Study Notes";
+        
+        generateMultiPagePDF(filename, subName, subHeader, data.units || []);
+      } catch (err) {
+        alert("PDF Generation Error: " + err.message);
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = originalText;
         }
-      ];
-
-      var sections = detailedUnits.map(function(u) {
-        return {
-          heading: u.unit,
-          body: u.theory
-        };
-      });
-
-      generateAndDownloadPDF(filename, subName, subHeader, sections);
+      }
     }
 
     function filterNotes() {
@@ -556,20 +541,21 @@ DASHBOARD_RAW_HTML = """<!DOCTYPE html>
       var list = courseData[sem] || courseData["3"] || [];
 
       var html = '';
-      list.forEach(function(item) {
+      list.forEach(function(item, idx) {
         var safeName = item.name.replace(/'/g, "\\\\'");
         var safeTopics = item.topics.replace(/'/g, "\\\\'");
+        var btnId = 'notes-btn-' + idx;
         html += '<div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 flex flex-col justify-between space-y-3 hover:border-emerald-500/40 transition">' +
           '<div>' +
             '<div class="flex items-center justify-between">' +
               '<span class="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">' + course + ' ' + branch + ' • Sem ' + sem + '</span>' +
-              '<span class="text-[9px] font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-300">Verified</span>' +
+              '<span class="text-[9px] font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-300">Verified Masterclass</span>' +
             '</div>' +
             '<h3 class="text-sm font-bold text-white mt-1.5">' + item.name + '</h3>' +
-            '<p class="text-xs text-slate-400 mt-1 leading-relaxed"><strong>Core Topics:</strong> ' + item.topics + '</p>' +
+            '<p class="text-xs text-slate-400 mt-1 leading-relaxed"><strong>Core Syllabus:</strong> ' + item.topics + '</p>' +
           '</div>' +
-          '<button onclick="triggerNotesDownload(\\'' + safeName + '\\', \\'' + safeTopics + '\\', \\'' + course + '\\', \\'' + branch + '\\', \\'' + sem + '\\')" class="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-xs font-bold text-slate-950 flex items-center justify-center gap-1.5 cursor-pointer transition">' +
-            '<span>Download Notes (PDF)</span>' +
+          '<button id="' + btnId + '" onclick="triggerNotesDownload(\\'' + safeName + '\\', \\'' + safeTopics + '\\', \\'' + course + '\\', \\'' + branch + '\\', \\'' + sem + '\\', \\'' + btnId + '\\')" class="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-xs font-bold text-slate-950 flex items-center justify-center gap-1.5 cursor-pointer transition">' +
+            '<span>Download Deep Notes (PDF)</span>' +
           '</button>' +
         '</div>';
       });
@@ -590,20 +576,24 @@ DASHBOARD_RAW_HTML = """<!DOCTYPE html>
       
       var sections = [
         {
-          heading: "Paper Details & Instructions",
-          body: "Session: " + year + " | Maximum Marks: " + marks + " | Time: 3 Hours\\nAnswer Section A (all compulsory) and any 4 questions from Section B."
+          title: "Examination Instructions & Blueprint",
+          content: "Session: " + year + " | Maximum Marks: " + marks + " | Time Allowed: 3 Hours\\nNote: Section A is compulsory (10 x 2 = 20 Marks). Answer any 4 questions from Section B (4 x 20 = 80 Marks)."
         },
         {
-          heading: "SECTION A (Short Answer Questions - 2 Marks Each)",
-          body: "Q1. Define asymptotic notations and compare time complexities.\\nQ2. Explain practical applications and system trade-offs of " + subject + ".\\nQ3. State differences between static and dynamic configurations."
+          title: "SECTION A: Short Technical Conceptual Questions (2 Marks Each)",
+          content: "Q1. Define Asymptotic notations (Big-O, Omega, Theta) with formal mathematical definitions.\\nQ2. Differentiate between static array allocation and dynamic pointer linked lists.\\nQ3. State the time and space complexity of MergeSort and explain its auxiliary array overhead.\\nQ4. What is a balanced binary tree? State the balance factor condition for AVL trees.\\nQ5. Explain the significance of Modulo arithmetic in Circular Queue implementations."
         },
         {
-          heading: "SECTION B (Analytical Questions - 10 Marks Each)",
-          body: "Q4. Explain complete architecture with labeled diagrams and step-by-step trace.\\nQ5. Analyze bottlenecks, edge cases, and fault-tolerance mechanisms."
+          title: "SECTION B: Comprehensive 10-Mark Analytical Problems",
+          content: "Q6. Explain QuickSort partition logic. Trace dry-run step-by-step for the array [38, 27, 43, 3, 9, 82, 10] and calculate Best, Average and Worst case recurrence relations.\\n\\nQ7. Explain Deadlock in Operating Systems. State the 4 Coffman conditions and demonstrate Banker's Algorithm with a safety check matrix.\\n\\nQ8. Compare 3NF and BCNF with functional dependency examples and schema decomposition proofs."
+        },
+        {
+          title: "SECTION C: Model Answer Blueprint & Grading Rubric",
+          content: "• For 10-mark questions: 3 marks allocated for clear block diagram/flowchart, 4 marks for mathematical/asymptotic derivation, 3 marks for edge cases and clean code.\\n• Practice using InternWise AI Doubt Solver for step-by-step debugging."
         }
       ];
 
-      generateAndDownloadPDF(filename, subject + " (" + year + ")", subHeader, sections);
+      generateMultiPagePDF(filename, subject + " (" + year + ")", subHeader, sections);
     }
 
     function loadPyqList() {
@@ -738,7 +728,6 @@ DASHBOARD_RAW_HTML = """<!DOCTYPE html>
         });
         document.getElementById('careerRoadmap').innerHTML = rHtml;
 
-        // Render Matching Job Openings
         var jHtml = '';
         (data.recommended_jobs || []).forEach(job => {
           jHtml += '<div class="bg-slate-950 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between space-y-2">' +
@@ -770,7 +759,7 @@ DASHBOARD_RAW_HTML = """<!DOCTYPE html>
 </body>
 </html>"""
 
-# ================= API ENDPOINTS =================
+# ================= BACKEND APIS =================
 @app.get("/", response_class=HTMLResponse)
 def serve_login():
     return LOGIN_HTML
@@ -780,51 +769,59 @@ def serve_dashboard(name: str = "Aditya Kumar", status: str = "Currently Pursuin
     page = DASHBOARD_RAW_HTML.replace("__STUDENT_NAME__", name).replace("__STUDENT_STATUS__", status)
     return HTMLResponse(content=page)
 
-@app.post("/api/btech-doubt-solver")
-async def btech_doubt_solver(req: DoubtRequest):
+@app.post("/api/generate-full-notes")
+async def generate_full_notes(req: NotesGenRequest):
+    fallback_units = [
+        {
+            "title": f"UNIT 1: Core Fundamentals & Mathematical Models of {req.subject}",
+            "content": f"1. Theoretical Foundations:\n• Comprehensive overview of {req.subject}, architectural definitions, and system models.\n• Memory layout considerations and standard state transitions.\n\n2. Key Mathematical Formulations:\n• Recurrence Relations: T(n) = aT(n/b) + f(n) solved using Master Theorem.\n• Asymptotic bounds: Big-O (Worst case upper bound), Omega (Best case lower bound), Theta (Tight asymptotic bound).\n\n3. Memory Architecture:\n• Contiguous allocation vs Dynamic Heap pointer allocation.\n• Cache locality benefits in sequential iteration versus linked structures."
+        },
+        {
+            "title": f"UNIT 2: Deep Syllabus Module & Implementation Breakdown",
+            "content": f"Detailed Technical Concepts for: {req.topics}\n\n" + "\n\n".join([f"• Sub-Topic {i+1} Deep Dive ({t.strip()}):\n  - Definition & Mechanics: In-depth working mechanism, data invariants, and edge conditions.\n  - Code Implementation Blueprint: Standard C++/Python logic with pointers/references and boundary validations.\n  - Complexity Analysis: Time Complexity = O(N log N) / O(1) random access; Auxiliary Space Complexity = O(N)." for i, t in enumerate(req.topics.split(","))])
+        },
+        {
+            "title": "UNIT 3: University 10-Mark Solved Questions & Exam Defense",
+            "content": "Q1. Explain the architectural tradeoffs and asymptotic differences between linear and non-linear implementations.\nAnswer: Linear data structures provide contiguous cache hits but suffer from fixed reallocation costs O(N). Non-linear tree/graph models allow dynamic logarithmic searching O(log N) at the cost of pointer overhead.\n\nQ2. State standard derivation steps for Best, Average, and Worst case time complexities.\nAnswer: Derive step-by-step recursive tree expansion and demonstrate height bounds with induction proof."
+        }
+    ]
+
     if not client:
-        return {"solution": "⚠️ Gemini API Key Render ke Environment Variables mein add nahi hai. Render Dashboard > Environment mein 'GEMINI_API_KEY' add karein."}
+        return {"units": fallback_units}
 
     prompt = f"""
-    You are an elite Computer Science Professor and B.Tech Academic Mentor.
-    Course: {req.course}
-    Branch: {req.branch}
+    You are an elite Computer Science Professor authoring a comprehensive B.Tech Engineering Handbook.
     Subject: {req.subject}
+    Course & Branch: {req.course} {req.branch} (Semester {req.semester})
+    Topics Covered: {req.topics}
 
-    Student Query / Problem:
-    {req.query}
+    Generate an exhaustive, textbook-grade study material organized into 4 Units.
+    Each unit must include:
+    - In-depth theoretical explanations and formal definitions.
+    - Code logic / pseudocode / algorithms.
+    - Asymptotic complexity (Time & Space).
+    - Solved university 10-mark exam questions.
 
-    Provide an exhaustive, crystal-clear, step-by-step educational answer with verified code/diagram traces and university exam scoring tips.
-    """
-    for model_name in ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]:
-        try:
-            response = client.models.generate_content(
-                model=model_name,
-                contents=prompt
-            )
-            if response and response.text:
-                return {"solution": response.text}
-        except Exception:
-            continue
-
-    return {"solution": "⚠️ AI Model busy. Please submit your question again."}
-
-@app.post("/api/evaluate-mock-test")
-async def evaluate_mock_test(req: TestEvalRequest):
-    if not client:
-        return {"score": 8, "feedback": "Good fundamental understanding demonstrated.", "ideal_points": "Include complexity analysis and edge case explanations."}
-
-    prompt = f"""
-    Subject: {req.subject}
-    Question: {req.question}
-    Candidate Answer: {req.user_answer}
-
-    Grade this answer out of 10 for university standard.
-    Return ONLY a valid JSON object:
+    Return ONLY a valid JSON object matching this schema:
     {{
-        "score": 8,
-        "feedback": "2 concise sentences on technical accuracy and missing concepts",
-        "ideal_points": "Key definitions or diagrams required for full marks"
+        "units": [
+            {{
+                "title": "UNIT 1: ...",
+                "content": "Exhaustive multi-paragraph textbook material..."
+            }},
+            {{
+                "title": "UNIT 2: ...",
+                "content": "Exhaustive multi-paragraph textbook material..."
+            }},
+            {{
+                "title": "UNIT 3: ...",
+                "content": "Exhaustive multi-paragraph textbook material..."
+            }},
+            {{
+                "title": "UNIT 4: Solved University Exam Questions & Scoring Rubric",
+                "content": "Exhaustive 10-mark questions with model answers..."
+            }}
+        ]
     }}
     """
     for model_name in ["gemini-2.5-flash", "gemini-2.0-flash"]:
@@ -838,7 +835,63 @@ async def evaluate_mock_test(req: TestEvalRequest):
         except Exception:
             continue
 
-    return {"score": 8, "feedback": "Solid structured answer.", "ideal_points": "Add exact step complexity and tradeoffs."}
+    return {"units": fallback_units}
+
+@app.post("/api/btech-doubt-solver")
+async def btech_doubt_solver(req: DoubtRequest):
+    if not client:
+        return {"solution": "⚠️ Gemini API Key missing in Render Environment. Please set GEMINI_API_KEY."}
+
+    prompt = f"""
+    You are an elite Computer Science Professor and B.Tech Academic Mentor.
+    Course: {req.course} | Branch: {req.branch} | Subject: {req.subject}
+    Student Doubt: {req.query}
+
+    Provide an exhaustive step-by-step educational answer with code, derivations, and exam scoring key points.
+    """
+    for model_name in ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]:
+        try:
+            response = client.models.generate_content(
+                model=model_name,
+                contents=prompt
+            )
+            if response and response.text:
+                return {"solution": response.text}
+        except Exception:
+            continue
+
+    return {"solution": "⚠️ AI Model busy. Please try again."}
+
+@app.post("/api/evaluate-mock-test")
+async def evaluate_mock_test(req: TestEvalRequest):
+    if not client:
+        return {"score": 8, "feedback": "Good fundamental answer.", "ideal_points": "Include complexity proofs and diagrams."}
+
+    prompt = f"""
+    Subject: {req.subject}
+    Question: {req.question}
+    Student Answer: {req.user_answer}
+
+    Grade this answer out of 10 for university standard.
+    Return ONLY a valid JSON object:
+    {{
+        "score": 8,
+        "feedback": "Concise feedback on accuracy",
+        "ideal_points": "Key definitions and diagrams required for 10/10 marks"
+    }}
+    """
+    for model_name in ["gemini-2.5-flash", "gemini-2.0-flash"]:
+        try:
+            response = client.models.generate_content(
+                model=model_name,
+                contents=prompt,
+                config=types.GenerateContentConfig(response_mime_type="application/json")
+            )
+            return json.loads(response.text)
+        except Exception:
+            continue
+
+    return {"score": 8, "feedback": "Solid answer.", "ideal_points": "Add complexity proofs."}
 
 @app.post("/api/analyze-resume")
 async def analyze_resume(file: UploadFile = File(...), job_description: str = Form(...)):
@@ -852,7 +905,7 @@ async def analyze_resume(file: UploadFile = File(...), job_description: str = Fo
 
     recommended_jobs = [
         {
-            "company": "Google / Microsoft Career Portal",
+            "company": "Google / Microsoft Careers",
             "role": "Software Engineering Intern / New Grad",
             "location": "Bengaluru / Hyderabad (Remote options)",
             "type": "Full-Time / Internship",
@@ -861,12 +914,12 @@ async def analyze_resume(file: UploadFile = File(...), job_description: str = Fo
         {
             "company": "Internshala Direct Hiring",
             "role": "Python Backend & AI Developer",
-            "location": "Noida / Gurgaon / Work From Home",
+            "location": "Noida / Gurgaon / Remote",
             "type": "Stipend: ₹25,000 - ₹40,000 / Month",
             "link": "https://internshala.com/internships/computer-science-internship"
         },
         {
-            "company": "LinkedIn Career Opportunities",
+            "company": "LinkedIn Job Portal",
             "role": "Associate Software Engineer (SDE-1)",
             "location": "India (Hybrid)",
             "type": "Entry Level Role",
