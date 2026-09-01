@@ -327,48 +327,67 @@ def render_dashboard(name: str, status: str):
       document.getElementById('section-' + tabName).classList.remove('hidden');
     }}
 
-    var academicDatabase = {{
-      "B.Tech": {{
+    var academicDatabase = {
+      "B.Tech": {
         "1": [
-          {{ name: "Engineering Mathematics I", topics: "Linear Algebra, Calculus, Differential Equations" }},
-          {{ name: "Engineering Physics", topics: "Optics, Lasers, Quantum Theory, Fiber Optics" }},
-          {{ name: "Basic Electrical Engineering", topics: "AC Circuits, DC Network Theorems, Transformers" }}
+          { name: "Engineering Mathematics I", topics: "Matrices, Calculus, Infinite Series, Multivariable Calculus" },
+          { name: "Engineering Physics", topics: "Optics, Lasers, Quantum Mechanics, Nanotechnology, Fiber Optics" },
+          { name: "Basic Electrical Engineering", topics: "DC/AC Circuits, Network Theorems, Transformers, Induction Motors" },
+          { name: "Engineering Mechanics", topics: "Force Systems, Friction, Centroids, Kinematics & Dynamics" },
+          { name: "Basic Mechanical Engineering", topics: "Thermodynamics, IC Engines, Refrigeration, Power Plants" },
+          { name: "Professional Communication", topics: "Technical Writing, Grammar, Business Letters, Soft Skills" }
         ],
         "2": [
-          {{ name: "Programming in C", topics: "Pointers, DMA, Structures, Recursion, File Handling" }},
-          {{ name: "Engineering Mathematics II", topics: "Fourier Series, Vector Calculus, Complex Variables" }},
-          {{ name: "Basic Electronics", topics: "Semiconductors, Diodes, BJT, Op-Amps" }}
+          { name: "Programming in C", topics: "Pointers, Dynamic Memory, Recursion, Structures, File I/O" },
+          { name: "Engineering Mathematics II", topics: "Differential Equations, Laplace Transforms, Fourier Series" },
+          { name: "Engineering Chemistry", topics: "Water Technology, Polymers, Corrosion, Electrochemistry" },
+          { name: "Basic Electronics Engineering", topics: "Semiconductors, Diodes, BJT, Operational Amplifiers" },
+          { name: "Engineering Graphics & Design", topics: "Orthographic Projections, Isometric Projections, CAD Tools" },
+          { name: "Environmental Science", topics: "Ecosystems, Pollution Control, Sustainable Development" }
         ],
         "3": [
-          {{ name: "Data Structures & Algorithms", topics: "Arrays, Linked Lists, Trees, Graphs, Sorting & Searching" }},
-          {{ name: "Digital Logic & Design (DLD)", topics: "Number Systems, K-Maps, Combinational & Sequential Circuits" }},
-          {{ name: "Discrete Mathematical Structures", topics: "Set Theory, Relations, Group Theory, Recurrences" }}
+          { name: "Data Structures & Algorithms (DSA)", topics: "Arrays, Linked Lists, Stacks, Queues, Trees, Graphs, Sorting & Searching" },
+          { name: "Digital Logic & Design (DLD)", topics: "Boolean Algebra, K-Maps, MUX/DEMUX, Flip-Flops, Counters, Shift Registers" },
+          { name: "Discrete Mathematical Structures", topics: "Set Theory, Relations, Group Theory, Graph Theory, Combinatorics" },
+          { name: "Object Oriented Programming (Java/C++)", topics: "Classes, Objects, Inheritance, Polymorphism, Abstraction, Exception Handling" },
+          { name: "Computer Organization & Architecture (COA)", topics: "Instruction Set, Pipelining, Memory Hierarchy, Cache Mapping, Control Unit" },
+          { name: "Universal Human Values & Ethics", topics: "Self-Exploration, Harmony in Self, Society and Nature, Professional Ethics" }
         ],
         "4": [
-          {{ name: "Operating Systems (OS)", topics: "Processes, CPU Scheduling, Deadlocks, Memory Management, Linux" }},
-          {{ name: "Database Management Systems (DBMS)", topics: "ER Model, Relational Algebra, SQL Queries, Normalization, ACID" }},
-          {{ name: "Computer Organization & Arch (COA)", topics: "Pipelining, Instruction Formats, Memory Hierarchy, Cache" }}
+          { name: "Operating Systems (OS)", topics: "Process Scheduling, Deadlocks, Memory Management, Virtual Memory, File Systems" },
+          { name: "Database Management Systems (DBMS)", topics: "ER Modeling, Relational Algebra, SQL, Normalization (1NF-BCNF), Transactions" },
+          { name: "Theory of Computation (TOC)", topics: "Finite Automata, Regular Expressions, CFL, Pushdown Automata, Turing Machines" },
+          { name: "Design & Analysis of Algorithms (DAA)", topics: "Divide & Conquer, Dynamic Programming, Greedy Method, Backtracking, NP-Complete" },
+          { name: "Software Engineering", topics: "SDLC Models, Agile, Scrum, Software Testing, SRS & Design Patterns" },
+          { name: "Applied Mathematics III", topics: "Probability Distributions, Numerical Methods, Statistics, Curve Fitting" }
         ],
         "5": [
-          {{ name: "Design & Analysis of Algorithms (DAA)", topics: "Divide & Conquer, Dynamic Programming, Greedy, NP Completeness" }},
-          {{ name: "Computer Networks (CN)", topics: "OSI vs TCP/IP, IP Addressing, Subnetting, Routing Protocols" }},
-          {{ name: "Software Engineering", topics: "Agile Model, SDLC, SRS Documentation, Testing Techniques" }}
+          { name: "Computer Networks (CN)", topics: "OSI & TCP/IP Model, Flow/Error Control, Subnetting, Routing (RIP, OSPF, BGP)" },
+          { name: "Compiler Design", topics: "Lexical Analysis, Top-Down/Bottom-Up Parsing, Intermediate Code, Code Optimization" },
+          { name: "Web Technologies & Full Stack", topics: "HTML5/CSS3, JavaScript, React/Node.js basics, RESTful APIs, Web Security" },
+          { name: "Cybersecurity & Cryptography", topics: "Symmetric/Asymmetric Ciphers, RSA, AES, Hash Functions, Network Security" },
+          { name: "Microprocessors & Microcontrollers", topics: "8085/8086 Architecture, Assembly Programming, Interfacing, Interrupts" }
         ],
         "6": [
-          {{ name: "Compiler Design", topics: "Lexical Analysis, Top-Down/Bottom-Up Parsing, Code Generation" }},
-          {{ name: "Artificial Intelligence & ML", topics: "State Space Search, Heuristics, Supervised/Unsupervised ML" }},
-          {{ name: "Cloud Computing & DevOps", topics: "Virtualization, AWS Basics, Docker, Kubernetes, CI/CD" }}
+          { name: "Artificial Intelligence & Machine Learning", topics: "Search Algorithms, Supervised/Unsupervised Learning, Neural Networks" },
+          { name: "Cloud Computing & DevOps", topics: "Virtualization, AWS/GCP Basics, Docker, Kubernetes, CI/CD Pipelines" },
+          { name: "Data Warehousing & Data Mining", topics: "ETL, Data Cubes, Association Rules, Clustering, Classification" },
+          { name: "Mobile App Development", topics: "Android/Flutter Architecture, UI Layouts, SQLite, Firebase Integration" },
+          { name: "Internet of Things (IoT)", topics: "Sensors, Actuators, Arduino, Raspberry Pi, MQTT, IoT Cloud" }
         ],
         "7": [
-          {{ name: "Cybersecurity & Cryptography", topics: "Symmetric/Asymmetric Encryption, RSA, Hashing, Network Attacks" }},
-          {{ name: "Distributed Systems", topics: "RPC, MapReduce, Consensus Algorithms, Microservices" }}
+          { name: "Distributed Systems & Cloud Systems", topics: "RPC, MapReduce, Consensus (Raft/Paxos), Microservices, CAP Theorem" },
+          { name: "Deep Learning & NLP", topics: "CNN, RNN, LSTM, Transformers, Text Preprocessing, Embeddings" },
+          { name: "Big Data Analytics", topics: "Hadoop Architecture, HDFS, Apache Spark, NoSQL (MongoDB, Cassandra)" },
+          { name: "High Performance Computing", topics: "Parallel Computing, OpenMP, MPI, GPU CUDA Programming" }
         ],
         "8": [
-          {{ name: "Major Project & Viva Preparation", topics: "SRS, Architecture Diagrams, Testing Reports, Code Review" }},
-          {{ name: "System Design & Scalability", topics: "High-Level Design (HLD), Low-Level Design (LLD), Load Balancing" }}
+          { name: "System Design & Architecture", topics: "Scalability, Load Balancing, Caching (Redis), Database Sharding, HLD/LLD" },
+          { name: "Major Capstone Project Preparation", topics: "System Architecture, Testing, Deployment, Code Documentation, Viva Defense" },
+          { name: "Entrepreneurship & Startup Management", topics: "Business Models, Lean Startup, Funding, IP & Patent Filing" }
         ]
-      }}
-    }};
+      }
+    };
 
     function filterNotes() {{
       var course = (document.getElementById('notesCourse') || {{}}).value || 'B.Tech';
@@ -600,7 +619,7 @@ async def evaluate_mock_test(req: TestEvalRequest):
     }}
     """
     response = client.models.generate_content(
-        model="gemini-2.5-flash",
+        model="gemini-3.6-flash",
         contents=prompt,
         config=types.GenerateContentConfig(response_mime_type="application/json")
     )
@@ -631,7 +650,7 @@ async def analyze_resume(file: UploadFile = File(...), job_description: str = Fo
     }}
     """
     response = client.models.generate_content(
-        model="gemini-2.5-flash",
+        model="gemini-3.6-flash",
         contents=prompt,
         config=types.GenerateContentConfig(response_mime_type="application/json")
     )
