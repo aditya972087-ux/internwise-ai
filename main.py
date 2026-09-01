@@ -559,24 +559,27 @@ def serve_dashboard(name: str = "Aditya Kumar", status: str = "Currently Pursuin
 @app.post("/api/btech-doubt-solver")
 async def btech_doubt_solver(req: DoubtRequest):
     if not client:
-        raise HTTPException(status_code=500, detail="Gemini API Key Missing in backend")
+        return {"solution": "⚠️ Gemini API Key missing in backend environment variables."}
 
-    prompt = f"""
-    You are an elite Computer Science Professor and B.Tech Academic Mentor.
-    Course: {req.course}
-    Branch: {req.branch}
-    Subject: {req.subject}
+    try:
+        prompt = f"""
+        You are an elite Computer Science Professor and B.Tech Academic Mentor.
+        Course: {req.course}
+        Branch: {req.branch}
+        Subject: {req.subject}
 
-    Student Query:
-    {req.query}
+        Student Query:
+        {req.query}
 
-    Provide a crystal-clear, step-by-step educational solution with code and exam points.
-    """
-    response = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=prompt
-    )
-    return {"solution": response.text}
+        Provide a crystal-clear, step-by-step educational solution with code and exam points.
+        """
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt
+        )
+        return {"solution": response.text}
+    except Exception as e:
+        return {"solution": f"⚠️ AI Generation Error: {str(e)}"}
 
 @app.post("/api/evaluate-mock-test")
 async def evaluate_mock_test(req: TestEvalRequest):
