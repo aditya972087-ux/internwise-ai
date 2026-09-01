@@ -601,7 +601,7 @@ async def btech_doubt_solver(req: DoubtRequest):
     Provide a crystal-clear, step-by-step educational solution with clean code, diagrams/flow, and key points for university exams.
     """
     # Primary Model Attempt with Fallbacks
-    models_to_try = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
+    models_to_try = ["gemini-3.6-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
     last_error = ""
 
     for model_name in models_to_try:
