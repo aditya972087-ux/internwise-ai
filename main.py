@@ -500,6 +500,18 @@ def render_dashboard(name: str, status: str):
       URL.revokeObjectURL(url);
     }
 
+    function downloadStudyFile(filename, content) {
+      var blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+      var url = URL.createObjectURL(blob);
+      var link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+
     function triggerNotesDownload(subName, topics, course, branch, sem) {
       var content = "=========================================================\\n" +
                     "           INTERNWISE ACADEMIC STUDY NOTES               \\n" +
@@ -514,6 +526,85 @@ def render_dashboard(name: str, status: str):
                     "Generated via InternWise Student Portal";
 
       downloadStudyFile(subName.replace(/[^a-zA-Z0-9]/g, "_") + "_Notes.txt", content);
+    }
+
+    function filterNotes() {
+      var course = (document.getElementById('notesCourse') || {}).value || 'B.Tech';
+      var branch = (document.getElementById('notesBranch') || {}).value || 'CSE';
+      var sem = (document.getElementById('notesSem') || {}).value || '3';
+      var container = document.getElementById('notesCardsList');
+      if (!container) return;
+
+      var courseData = academicDatabase[course] || academicDatabase["B.Tech"];
+      var list = courseData[sem] || courseData["3"] || [];
+
+      var html = '';
+      list.forEach(function(item) {
+        var safeName = item.name.replace(/'/g, "\\\\'");
+        var safeTopics = item.topics.replace(/'/g, "\\\\'");
+        html += '<div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 flex flex-col justify-between space-y-4 hover:border-emerald-500/40 transition">' +
+          '<div>' +
+            '<div class="flex items-center justify-between">' +
+              '<span class="text-xs font-bold text-emerald-400 uppercase tracking-wider">' + course + ' ' + branch + ' • Sem ' + sem + '</span>' +
+              '<span class="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-300">Verified</span>' +
+            '</div>' +
+            '<h3 class="text-base font-bold text-white mt-2">' + item.name + '</h3>' +
+            '<p class="text-xs text-slate-400 mt-2 leading-relaxed"><strong>Core Topics:</strong> ' + item.topics + '</p>' +
+          '</div>' +
+          '<button onclick="triggerNotesDownload(\\'' + safeName + '\\', \\'' + safeTopics + '\\', \\'' + course + '\\', \\'' + branch + '\\', \\'' + sem + '\\')" class="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-xs font-bold text-slate-950 flex items-center justify-center gap-2 cursor-pointer transition">' +
+            '<span>Download Notes</span>' +
+          '</button>' +
+        '</div>';
+      });
+      container.innerHTML = html;
+    }
+
+    var pyqData = [
+      { subject: "Data Structures & Algorithms", sem: "Semester 3", year: "2024 End-Term", marks: "100 Marks" },
+      { subject: "Operating Systems", sem: "Semester 4", year: "2024 Mid-Term", marks: "50 Marks" },
+      { subject: "Database Management Systems", sem: "Semester 4", year: "2023 End-Term", marks: "100 Marks" },
+      { subject: "Computer Networks", sem: "Semester 5", year: "2024 End-Term", marks: "100 Marks" }
+    ];
+
+    function triggerPyqDownload(subject, sem, year, marks) {
+      var content = "=========================================================\\n" +
+                    "       UNIVERSITY END-SEMESTER EXAMINATION PAPER         \\n" +
+                    "=========================================================\\n\\n" +
+                    "Subject: " + subject + "\\n" +
+                    "Semester: " + sem + " | Session: " + year + "\\n" +
+                    "Maximum Marks: " + marks + " | Time Allowed: 3 Hours\\n\\n" +
+                    "---------------------------------------------------------\\n" +
+                    "SECTION A (Short Questions - 2 Marks Each)\\n" +
+                    "---------------------------------------------------------\\n" +
+                    "Q1. Define core principles and give complexity analysis.\\n" +
+                    "Q2. Explain practical applications of " + subject + ".\\n" +
+                    "Q3. Differentiate between primary algorithms and trade-offs.\\n\\n" +
+                    "---------------------------------------------------------\\n" +
+                    "SECTION B (Analytical Questions - 10 Marks Each)\\n" +
+                    "---------------------------------------------------------\\n" +
+                    "Q4. Explain complete architecture with diagram and execution trace.\\n" +
+                    "Q5. Compare performance benchmarks and edge cases.\\n\\n" +
+                    "Downloaded from InternWise PYQ Repository.";
+
+      downloadStudyFile(subject.replace(/[^a-zA-Z0-9]/g, "_") + "_" + year.replace(/[^a-zA-Z0-9]/g, "_") + "_PYQ.txt", content);
+    }
+
+    function loadPyqList() {
+      var container = document.getElementById('pyqList');
+      if (!container) return;
+      var html = '';
+      pyqData.forEach(function(p) {
+        var safeSub = p.subject.replace(/'/g, "\\\\'");
+        html += '<div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 flex items-center justify-between hover:border-emerald-500/40 transition">' +
+          '<div>' +
+            '<span class="text-xs font-bold text-emerald-400 uppercase">' + p.sem + '</span>' +
+            '<h4 class="text-base font-bold text-white mt-0.5">' + p.subject + '</h4>' +
+            '<p class="text-xs text-slate-400 mt-1">' + p.year + ' • ' + p.marks + '</p>' +
+          '</div>' +
+          '<button onclick="triggerPyqDownload(\\'' + safeSub + '\\', \\'' + p.sem + '\\', \\'' + p.year + '\\', \\'' + p.marks + '\\')" class="px-4 py-2 text-xs font-bold rounded-xl bg-emerald-500 text-slate-950 hover:bg-emerald-400 cursor-pointer transition">Download Paper</button>' +
+        '</div>';
+      });
+      container.innerHTML = html;
     }
 
     async function askDoubtAI() {{
