@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-app = FastAPI(title="InternWise Student & Career Portal", version="3.2.0")
+app = FastAPI(title="InternWise Student & Career Portal", version="3.3.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -53,8 +53,7 @@ HTML_PAGE = """<!DOCTYPE html>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen">
 
-  <!-- ================= SCREEN 1: ONBOARDING / PROFILE ENTRY ================= -->
-  <div id="onboardingScreen" class="min-h-screen flex items-center justify-center p-4">
+  <div id="onboardingScreen" style="display: flex;" class="min-h-screen items-center justify-center p-4">
     <div class="max-w-xl w-full bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-10 shadow-2xl space-y-6">
       
       <div class="text-center space-y-2">
@@ -116,7 +115,7 @@ HTML_PAGE = """<!DOCTYPE html>
           </select>
         </div>
 
-        <button type="button" id="enterPortalBtn" class="w-full py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-slate-950 font-black text-sm transition shadow-lg shadow-emerald-500/20 cursor-pointer">
+        <button type="button" onclick="handleEnterPortal()" id="enterPortalBtn" class="w-full py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-slate-950 font-black text-sm transition shadow-lg shadow-emerald-500/20 cursor-pointer">
           Enter InternWise Portal &rarr;
         </button>
       </div>
@@ -124,8 +123,7 @@ HTML_PAGE = """<!DOCTYPE html>
   </div>
 
 
-  <!-- ================= SCREEN 2: MAIN DASHBOARD ================= -->
-  <div id="mainDashboard" class="hidden max-w-6xl mx-auto px-4 py-6">
+  <div id="mainDashboard" style="display: none;" class="max-w-6xl mx-auto px-4 py-6">
     
     <header class="flex flex-col md:flex-row items-center justify-between gap-4 border-b border-slate-800 pb-6 mb-8">
       <div class="flex items-center gap-3.5">
@@ -160,8 +158,7 @@ HTML_PAGE = """<!DOCTYPE html>
       </div>
     </header>
 
-    <!-- 1. NOTES HUB -->
-    <section id="section-notes" class="space-y-6">
+    <section id="section-notes" style="display: block;" class="space-y-6">
       <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-6">
         <div>
           <h2 class="text-xl font-bold text-white">Academic Notes & Syllabus Finder</h2>
@@ -208,8 +205,7 @@ HTML_PAGE = """<!DOCTYPE html>
       <div id="notesCardsList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"></div>
     </section>
 
-    <!-- 2. AI DOUBT SOLVER -->
-    <section id="section-doubt" class="hidden space-y-6">
+    <section id="section-doubt" style="display: none;" class="space-y-6">
       <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-5">
         <div>
           <h2 class="text-xl font-bold text-white">24/7 AI Problem & Doubt Assistant</h2>
@@ -229,14 +225,13 @@ HTML_PAGE = """<!DOCTYPE html>
         </button>
       </div>
 
-      <div id="doubtSolutionBox" class="hidden bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4">
+      <div id="doubtSolutionBox" style="display: none;" class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4">
         <h3 class="text-sm font-bold text-emerald-400 uppercase tracking-wider">AI Solution</h3>
         <div id="doubtSolutionText" class="text-sm text-slate-200 whitespace-pre-wrap leading-relaxed"></div>
       </div>
     </section>
 
-    <!-- 3. PYQs -->
-    <section id="section-pyq" class="hidden space-y-6">
+    <section id="section-pyq" style="display: none;" class="space-y-6">
       <div>
         <h2 class="text-xl font-bold text-white">Previous Year Question Papers (PYQs)</h2>
         <p class="text-xs text-slate-400">Download and solve past university exam papers</p>
@@ -244,8 +239,7 @@ HTML_PAGE = """<!DOCTYPE html>
       <div id="pyqList" class="grid grid-cols-1 md:grid-cols-2 gap-5"></div>
     </section>
 
-    <!-- 4. MOCK TESTS -->
-    <section id="section-mock" class="hidden space-y-6">
+    <section id="section-mock" style="display: none;" class="space-y-6">
       <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-5">
         <div>
           <h2 class="text-xl font-bold text-white">Subject Mock Test & AI Evaluator</h2>
@@ -262,19 +256,18 @@ HTML_PAGE = """<!DOCTYPE html>
           <button onclick="generateMockQ()" class="px-6 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-100 text-sm font-bold border border-slate-700 cursor-pointer">Generate Question</button>
         </div>
 
-        <div id="mockQuestionArea" class="hidden bg-slate-950 p-5 rounded-2xl border border-slate-800 space-y-4">
+        <div id="mockQuestionArea" style="display: none;" class="bg-slate-950 p-5 rounded-2xl border border-slate-800 space-y-4">
           <span class="text-xs font-bold text-emerald-400 uppercase tracking-wide">University Question:</span>
           <p id="mockQuestionText" class="text-sm font-semibold text-white"></p>
           <textarea id="mockUserAns" rows="4" placeholder="Write your answer here..." class="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs sm:text-sm text-slate-200 focus:border-emerald-500 focus:outline-none"></textarea>
           <button onclick="submitMockGrading()" id="mockGradingBtn" class="px-5 py-2.5 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs hover:bg-emerald-400 cursor-pointer">Evaluate My Answer</button>
         </div>
 
-        <div id="mockEvaluationResult" class="hidden p-5 rounded-2xl bg-slate-950 border border-slate-800 text-sm space-y-2"></div>
+        <div id="mockEvaluationResult" style="display: none;" class="p-5 rounded-2xl bg-slate-950 border border-slate-800 text-sm space-y-2"></div>
       </div>
     </section>
 
-    <!-- 5. JOB & CAREER -->
-    <section id="section-career" class="hidden space-y-6">
+    <section id="section-career" style="display: none;" class="space-y-6">
       <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-5">
         <div>
           <h2 class="text-xl font-bold text-white">Job Requirements & Resume Gap Analysis</h2>
@@ -298,7 +291,7 @@ HTML_PAGE = """<!DOCTYPE html>
         </div>
       </div>
 
-      <div id="careerResults" class="hidden space-y-6">
+      <div id="careerResults" style="display: none;" class="space-y-6">
         <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 flex flex-col sm:flex-row justify-between items-center gap-4">
           <div>
             <span class="text-xs uppercase font-bold text-slate-400">Match Accuracy</span>
@@ -329,12 +322,23 @@ HTML_PAGE = """<!DOCTYPE html>
 
   <script>
     function transitionToDashboard(user) {
-      document.getElementById('greetingName').textContent = user.name || 'Student';
-      document.getElementById('greetingStatus').textContent = user.status || 'B.Tech';
-      document.getElementById('onboardingScreen').classList.add('hidden');
-      document.getElementById('mainDashboard').classList.remove('hidden');
-      filterNotes();
-      loadPyqList();
+      try {
+        var gName = document.getElementById('greetingName');
+        var gStatus = document.getElementById('greetingStatus');
+        if (gName) gName.textContent = user.name || 'Student';
+        if (gStatus) gStatus.textContent = user.status || 'B.Tech';
+
+        var onb = document.getElementById('onboardingScreen');
+        var dash = document.getElementById('mainDashboard');
+
+        if (onb) onb.style.display = 'none';
+        if (dash) dash.style.display = 'block';
+
+        filterNotes();
+        loadPyqList();
+      } catch (err) {
+        console.error('Transition error:', err);
+      }
     }
 
     function checkExistingProfile() {
@@ -368,21 +372,14 @@ HTML_PAGE = """<!DOCTYPE html>
 
       try {
         localStorage.setItem('internwise_user', JSON.stringify(user));
-      } catch (e) {
-        console.error('LocalStorage write error:', e);
-      }
+      } catch (e) {}
 
       transitionToDashboard(user);
     }
 
-    // Direct Event Binding
-    document.addEventListener('DOMContentLoaded', function() {
-      var btn = document.getElementById('enterPortalBtn');
-      if (btn) {
-        btn.addEventListener('click', handleEnterPortal);
-      }
+    window.onload = function() {
       checkExistingProfile();
-    });
+    };
 
     function logoutProfile() {
       try {
@@ -398,10 +395,10 @@ HTML_PAGE = """<!DOCTYPE html>
 
       ['notes', 'doubt', 'pyq', 'mock', 'career'].forEach(function(s) {
         var el = document.getElementById('section-' + s);
-        if (el) el.classList.add('hidden');
+        if (el) el.style.display = 'none';
       });
       var targetSection = document.getElementById('section-' + tabName);
-      if (targetSection) targetSection.classList.remove('hidden');
+      if (targetSection) targetSection.style.display = 'block';
     }
 
     var academicDatabase = {
@@ -519,7 +516,7 @@ HTML_PAGE = """<!DOCTYPE html>
         });
         var data = await res.json();
         document.getElementById('doubtSolutionText').textContent = data.solution;
-        document.getElementById('doubtSolutionBox').classList.remove('hidden');
+        document.getElementById('doubtSolutionBox').style.display = 'block';
       } catch (e) {
         alert('Error: ' + e.message);
       } finally {
@@ -538,8 +535,8 @@ HTML_PAGE = """<!DOCTYPE html>
     function generateMockQ() {
       var sub = document.getElementById('mockSubjectPick').value;
       document.getElementById('mockQuestionText').textContent = mockBank[sub] || 'Explain core concepts in ' + sub;
-      document.getElementById('mockQuestionArea').classList.remove('hidden');
-      document.getElementById('mockEvaluationResult').classList.add('hidden');
+      document.getElementById('mockQuestionArea').style.display = 'block';
+      document.getElementById('mockEvaluationResult').style.display = 'none';
       document.getElementById('mockUserAns').value = '';
     }
 
@@ -564,7 +561,7 @@ HTML_PAGE = """<!DOCTYPE html>
         out.innerHTML = '<div class="flex justify-between items-center"><span class="font-bold text-white">Score: <strong class="text-emerald-400 text-lg">' + data.score + '/10</strong></span></div>' +
           '<p class="text-slate-300"><strong>AI Feedback:</strong> ' + data.feedback + '</p>' +
           '<p class="text-xs text-slate-400 border-t border-slate-800 pt-2"><strong class="text-emerald-400">Key Points:</strong> ' + data.ideal_points + '</p>';
-        out.classList.remove('hidden');
+        out.style.display = 'block';
       } catch (err) {
         alert('Grading error: ' + err.message);
       } finally {
@@ -608,7 +605,7 @@ HTML_PAGE = """<!DOCTYPE html>
         });
         document.getElementById('careerRoadmap').innerHTML = rHtml;
 
-        document.getElementById('careerResults').classList.remove('hidden');
+        document.getElementById('careerResults').style.display = 'block';
       } catch (err) {
         alert('Resume Error: ' + err.message);
       } finally {
