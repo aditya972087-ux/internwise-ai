@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-app = FastAPI(title="InternWise Student & Career Portal", version="7.0.0")
+app = FastAPI(title="InternWise Portal", version="10.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -28,7 +28,7 @@ try:
     api_key = os.getenv("GEMINI_API_KEY", "").strip()
     if api_key:
         client = genai.Client(api_key=api_key)
-except Exception as e:
+except Exception:
     client = None
 
 class DoubtRequest(BaseModel):
@@ -61,12 +61,12 @@ LOGIN_HTML = """<!DOCTYPE html>
         IW
       </div>
       <h1 class="text-2xl sm:text-3xl font-black tracking-tight">Intern<span class="text-emerald-400">Wise</span></h1>
-      <p class="text-xs text-slate-400">Smart Academic Hub & Career AI Portal</p>
+      <p class="text-xs text-slate-400">Smart Academic Notes & Career AI Suite</p>
     </div>
 
     <div class="border-t border-slate-800 pt-4">
       <h2 class="text-base font-bold text-white mb-1">Create Student Profile</h2>
-      <p class="text-xs text-slate-400">Personalize your verified notes, mock tests & career roadmap.</p>
+      <p class="text-xs text-slate-400">Personalize your verified study notes, mock tests & career AI.</p>
     </div>
 
     <form action="/dashboard" method="GET" class="space-y-4">
@@ -422,10 +422,47 @@ DASHBOARD_RAW_HTML = """<!DOCTYPE html>
       }
     };
 
+    var comprehensiveStudyRepo = {
+      "Data Structures & Algorithms (DSA)": [
+        {
+          unit: "UNIT 1: Linear Data Structures (Arrays, Stacks, Queues)",
+          theory: "• Arrays: Contiguous memory allocation, O(1) random indexing using [Base_Address + i * size]. Tradeoff: Static capacity, costly insertion and deletion O(N).\\n• Stacks (LIFO Principle): Push, Pop, Peek operations run in O(1). Applications: Expression evaluation (Infix to Postfix), Function call stack, Depth-First Search.\\n• Queues (FIFO Principle): Modulo arithmetic in Circular Queue: (rear + 1) % Capacity to prevent space wastage. Priority Queue is implemented using Binary Max/Min Heap."
+        },
+        {
+          unit: "UNIT 2: Dynamic Linked Lists & Non-Linear Trees",
+          theory: "• Linked Lists: Singly, Doubly, and Circular Linked Lists with dynamic pointer allocations (Node -> Data | Next). O(1) insertion at head without contiguous memory requirement.\\n• Binary Search Trees (BST): Left child < Root <= Right child. Inorder traversal yields sorted elements. AVL Trees maintain balance factor {-1, 0, 1} through LL, RR, LR, RL rotations."
+        },
+        {
+          unit: "UNIT 3: Graph Algorithms & Asymptotic Complexity",
+          theory: "• Representations: Adjacency Matrix O(V^2) vs Adjacency List O(V + E).\\n• Traversals: BFS uses Queue for shortest path in unweighted graphs; DFS uses Recursion/Stack for topological sorting and cycle detection.\\n• Sorting Comparisons: QuickSort (Average O(N log N), Worst O(N^2) on sorted pivot), MergeSort (Guaranteed O(N log N) with O(N) auxiliary space)."
+        }
+      ],
+      "Digital Logic & Design (DLD)": [
+        {
+          unit: "UNIT 1: Boolean Algebra & Karnaugh Maps (K-Maps)",
+          theory: "• Boolean Axioms, De Morgan's Theorems, Standard SOP and POS Canonical forms.\\n• 4-Variable K-Map reduction using Gray code adjacency to eliminate static and dynamic hazards."
+        },
+        {
+          unit: "UNIT 2: Combinational & Sequential Logic Circuits",
+          theory: "• Combinational: Multiplexers (MUX as universal function generator), Decoders, Encoders, Half/Full Adders.\\n• Sequential: Latches vs Edge-Triggered Flip-Flops (SR, JK, D, T). Race-around condition in JK resolved by Master-Slave configuration."
+        }
+      ],
+      "Operating Systems (OS)": [
+        {
+          unit: "UNIT 1: Process Management & CPU Scheduling",
+          theory: "• Process Control Block (PCB): Context switching overhead. Scheduling: FCFS (Convoy Effect), SJF (Provably optimal average wait time), Round Robin (Time quantum selection balance).\\n• Deadlock: 4 Coffman conditions (Mutual Exclusion, Hold & Wait, No Preemption, Circular Wait). Banker's Algorithm prevents unsafe state transitions."
+        },
+        {
+          unit: "UNIT 2: Virtual Memory Management & Paging",
+          theory: "• Paging: Eliminates external fragmentation using Page Tables and TLB (Translation Lookaside Buffer).\\n• Page Replacement: FIFO, Optimal (Belady's Anomaly avoidance), and LRU (Least Recently Used) algorithms."
+        }
+      ]
+    };
+
     // Client-side PDF Generator using jsPDF
     function generateAndDownloadPDF(filename, title, subHeader, sections) {
       if (!window.jspdf || !window.jspdf.jsPDF) {
-        alert("PDF generator loading, please retry in 2 seconds.");
+        alert("PDF engine loading, please retry in 2 seconds.");
         return;
       }
       var doc = new window.jspdf.jsPDF();
@@ -450,6 +487,11 @@ DASHBOARD_RAW_HTML = """<!DOCTYPE html>
 
       var yPos = 46;
       sections.forEach(function(sec) {
+        if (yPos > 260) {
+          doc.addPage();
+          yPos = 20;
+        }
+
         doc.setTextColor(5, 150, 105);
         doc.setFontSize(11);
         doc.setFont("helvetica", "bold");
@@ -469,65 +511,27 @@ DASHBOARD_RAW_HTML = """<!DOCTYPE html>
       doc.line(14, 280, 196, 280);
       doc.setFontSize(8);
       doc.setTextColor(148, 163, 184);
-      doc.text("Verified University Syllabus & Exam Prep • Generated via InternWise Pro", 14, 285);
+      doc.text("Verified University Curriculum & Exam Preparation • InternWise Pro", 14, 285);
 
       doc.save(filename);
     }
 
-  // Detailed Unit-wise Academic Content Engine
-    var comprehensiveStudyRepo = {
-      "Data Structures & Algorithms (DSA)": [
-        {
-          unit: "UNIT 1: Linear Data Structures (Arrays, Stacks, Queues)",
-          theory: "• Arrays: Contiguous memory storage with O(1) random access by index [base_address + i * size]. Tradeoff: Fixed size and expensive insertions/deletions O(N).\n• Stacks (LIFO): Operations include Push, Pop, and Peek in O(1). Applications: Expression evaluation (Infix to Postfix conversion), Recursion Call Stack, and Undo/Redo buffers.\n• Queues (FIFO): Linear vs Circular Queue. Circular queue resolves space wastage using modulo arithmetic: (rear + 1) % MAX_SIZE. Priority Queues are optimized using Binary Heaps."
-        },
-        {
-          unit: "UNIT 2: Linked Lists & Non-Linear Trees",
-          theory: "• Singly vs Doubly vs Circular Linked Lists: Dynamic node allocation containing Data and Pointer references. Insertion/Deletion at head takes O(1) time without contiguous memory constraint.\n• Binary Search Trees (BST): Left child < Root <= Right child. In-order traversal gives sorted sequence. Worst case degenerates to O(N) for skewed trees, requiring Self-Balancing Trees (AVL Trees with LL, RR, LR, RL rotations to maintain balance factor in {-1, 0, 1})."
-        },
-        {
-          unit: "UNIT 3: Graph Theory & Asymptotic Analysis",
-          theory: "• Representation: Adjacency Matrix (O(V^2) memory) vs Adjacency List (O(V + E) memory).\n• Traversals: BFS uses FIFO Queue for shortest path in unweighted graphs; DFS uses LIFO Stack/Recursion for cycle detection and topological sorting.\n• Sorting Complexities: QuickSort (Average O(N log N), Worst O(N^2) on sorted pivot), MergeSort (Guaranteed O(N log N) with O(N) auxiliary space)."
-        }
-      ],
-      "Digital Logic & Design (DLD)": [
-        {
-          unit: "UNIT 1: Boolean Algebra & Karnaugh Maps (K-Maps)",
-          theory: "• Canonical Forms: SOP (Sum of Products) and POS (Product of Sums). Minimization using De Morgan's Laws and 4-Variable K-Maps with Gray code grouping to avoid hazard conditions."
-        },
-        {
-          unit: "UNIT 2: Combinational vs Sequential Circuits",
-          theory: "• Combinational: Multiplexers (MUX as universal logic module), Decoders, Encoders, and Full Adders.\n• Sequential: Latches vs Edge-Triggered Flip-Flops (SR, JK, D, T). Race-around condition in JK Flip-Flop resolved via Master-Slave configuration."
-        }
-      ],
-      "Operating Systems (OS)": [
-        {
-          unit: "UNIT 1: Process Management & CPU Scheduling",
-          theory: "• Process Control Block (PCB): Context switching overhead. CPU Scheduling algorithms: FCFS (Convoy Effect), SJF/SRTF (Optimal average waiting time), Round Robin (Time quantum selection balance).\n• Deadlock: 4 Coffman conditions (Mutual Exclusion, Hold & Wait, No Preemption, Circular Wait). Banker's Algorithm uses Safety Check to prevent unsafe states."
-        },
-        {
-          unit: "UNIT 2: Virtual Memory & Paging Architectures",
-          theory: "• Memory Hierarchy: Paging eliminates external fragmentation using Page Tables and TLB (Translation Lookaside Buffer).\n• Page Replacement: FIFO, Optimal (Belady's Anomaly avoidance), and LRU (Least Recently Used) algorithms."
-        }
-      ]
-    };
-
     function triggerNotesDownload(subName, topics, course, branch, sem) {
-      var filename = subName.replace(/[^a-zA-Z0-9]/g, "_") + "_Full_Notes.pdf";
+      var filename = subName.replace(/[^a-zA-Z0-9]/g, "_") + "_Verified_Notes.pdf";
       var subHeader = course + " (" + branch + ") • Semester " + sem + " Comprehensive Study Notes";
       
       var detailedUnits = comprehensiveStudyRepo[subName] || [
         {
-          unit: "UNIT 1: Fundamentals & Architectural Overview",
-          theory: "• Core foundations, theoretical principles, and mathematical models of " + subName + ".\n• Standard university derivations and execution block diagrams for 10-mark descriptive answers."
+          unit: "UNIT 1: Core Fundamentals & Theoretical Principles",
+          theory: "• Standard mathematical formulations, architectural definitions, and foundational models of " + subName + ".\\n• Essential derivations and labeled flowcharts required for university 10-mark descriptive questions."
         },
         {
-          unit: "UNIT 2: Detailed Syllabus Deep-Dive & Topics",
-          theory: topics.split(', ').map(function(t, i) { return "• Module " + (i + 1) + ": Comprehensive theoretical breakdown and practical use cases of " + t + "."; }).join('\n')
+          unit: "UNIT 2: Detailed Syllabus Deep-Dive & Key Modules",
+          theory: topics.split(', ').map(function(t, i) { return "• Module " + (i + 1) + ": Exhaustive breakdown and practical implementations of " + t + "."; }).join('\\n')
         },
         {
-          unit: "UNIT 3: University Examination Strategy & Important Questions",
-          theory: "• Focus on core architecture diagrams and mathematical formulations.\n• Compare tradeoffs, asymptotic complexities, and edge cases.\n• Use InternWise AI Doubt Solver for instant step-by-step proofs."
+          unit: "UNIT 3: University Examination Scoring Strategy",
+          theory: "• Prioritize time complexity derivations, state diagrams, and architectural blueprints.\\n• Use InternWise AI Doubt Solver for step-by-step proofs and code debugging."
         }
       ];
 
@@ -846,7 +850,6 @@ async def analyze_resume(file: UploadFile = File(...), job_description: str = Fo
     except Exception:
         extracted_text = "Software Engineering Student"
 
-    # Default matching jobs catalog
     recommended_jobs = [
         {
             "company": "Google / Microsoft Career Portal",
