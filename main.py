@@ -474,20 +474,69 @@ DASHBOARD_RAW_HTML = """<!DOCTYPE html>
       doc.save(filename);
     }
 
-    function triggerNotesDownload(subName, topics, course, branch, sem) {
-      var filename = subName.replace(/[^a-zA-Z0-9]/g, "_") + "_Verified_Notes.pdf";
-      var subHeader = course + " (" + branch + ") • Semester " + sem + " Study Notes";
-      
-      var sections = [
+  // Detailed Unit-wise Academic Content Engine
+    var comprehensiveStudyRepo = {
+      "Data Structures & Algorithms (DSA)": [
         {
-          heading: "1. Core Topics & Syllabus Breakdown",
-          body: topics.split(', ').map(function(t, i) { return (i + 1) + ". " + t; }).join('\\n')
+          unit: "UNIT 1: Linear Data Structures (Arrays, Stacks, Queues)",
+          theory: "• Arrays: Contiguous memory storage with O(1) random access by index [base_address + i * size]. Tradeoff: Fixed size and expensive insertions/deletions O(N).\n• Stacks (LIFO): Operations include Push, Pop, and Peek in O(1). Applications: Expression evaluation (Infix to Postfix conversion), Recursion Call Stack, and Undo/Redo buffers.\n• Queues (FIFO): Linear vs Circular Queue. Circular queue resolves space wastage using modulo arithmetic: (rear + 1) % MAX_SIZE. Priority Queues are optimized using Binary Heaps."
         },
         {
-          heading: "2. Semester Exam Preparation Strategy",
-          body: "• Practice standard derivations and block diagrams for 10-mark questions.\\n• Cover previous 3 years examination papers.\\n• Use InternWise AI Doubt Solver for step-by-step algorithms."
+          unit: "UNIT 2: Linked Lists & Non-Linear Trees",
+          theory: "• Singly vs Doubly vs Circular Linked Lists: Dynamic node allocation containing Data and Pointer references. Insertion/Deletion at head takes O(1) time without contiguous memory constraint.\n• Binary Search Trees (BST): Left child < Root <= Right child. In-order traversal gives sorted sequence. Worst case degenerates to O(N) for skewed trees, requiring Self-Balancing Trees (AVL Trees with LL, RR, LR, RL rotations to maintain balance factor in {-1, 0, 1})."
+        },
+        {
+          unit: "UNIT 3: Graph Theory & Asymptotic Analysis",
+          theory: "• Representation: Adjacency Matrix (O(V^2) memory) vs Adjacency List (O(V + E) memory).\n• Traversals: BFS uses FIFO Queue for shortest path in unweighted graphs; DFS uses LIFO Stack/Recursion for cycle detection and topological sorting.\n• Sorting Complexities: QuickSort (Average O(N log N), Worst O(N^2) on sorted pivot), MergeSort (Guaranteed O(N log N) with O(N) auxiliary space)."
+        }
+      ],
+      "Digital Logic & Design (DLD)": [
+        {
+          unit: "UNIT 1: Boolean Algebra & Karnaugh Maps (K-Maps)",
+          theory: "• Canonical Forms: SOP (Sum of Products) and POS (Product of Sums). Minimization using De Morgan's Laws and 4-Variable K-Maps with Gray code grouping to avoid hazard conditions."
+        },
+        {
+          unit: "UNIT 2: Combinational vs Sequential Circuits",
+          theory: "• Combinational: Multiplexers (MUX as universal logic module), Decoders, Encoders, and Full Adders.\n• Sequential: Latches vs Edge-Triggered Flip-Flops (SR, JK, D, T). Race-around condition in JK Flip-Flop resolved via Master-Slave configuration."
+        }
+      ],
+      "Operating Systems (OS)": [
+        {
+          unit: "UNIT 1: Process Management & CPU Scheduling",
+          theory: "• Process Control Block (PCB): Context switching overhead. CPU Scheduling algorithms: FCFS (Convoy Effect), SJF/SRTF (Optimal average waiting time), Round Robin (Time quantum selection balance).\n• Deadlock: 4 Coffman conditions (Mutual Exclusion, Hold & Wait, No Preemption, Circular Wait). Banker's Algorithm uses Safety Check to prevent unsafe states."
+        },
+        {
+          unit: "UNIT 2: Virtual Memory & Paging Architectures",
+          theory: "• Memory Hierarchy: Paging eliminates external fragmentation using Page Tables and TLB (Translation Lookaside Buffer).\n• Page Replacement: FIFO, Optimal (Belady's Anomaly avoidance), and LRU (Least Recently Used) algorithms."
+        }
+      ]
+    };
+
+    function triggerNotesDownload(subName, topics, course, branch, sem) {
+      var filename = subName.replace(/[^a-zA-Z0-9]/g, "_") + "_Full_Notes.pdf";
+      var subHeader = course + " (" + branch + ") • Semester " + sem + " Comprehensive Study Notes";
+      
+      var detailedUnits = comprehensiveStudyRepo[subName] || [
+        {
+          unit: "UNIT 1: Fundamentals & Architectural Overview",
+          theory: "• Core foundations, theoretical principles, and mathematical models of " + subName + ".\n• Standard university derivations and execution block diagrams for 10-mark descriptive answers."
+        },
+        {
+          unit: "UNIT 2: Detailed Syllabus Deep-Dive & Topics",
+          theory: topics.split(', ').map(function(t, i) { return "• Module " + (i + 1) + ": Comprehensive theoretical breakdown and practical use cases of " + t + "."; }).join('\n')
+        },
+        {
+          unit: "UNIT 3: University Examination Strategy & Important Questions",
+          theory: "• Focus on core architecture diagrams and mathematical formulations.\n• Compare tradeoffs, asymptotic complexities, and edge cases.\n• Use InternWise AI Doubt Solver for instant step-by-step proofs."
         }
       ];
+
+      var sections = detailedUnits.map(function(u) {
+        return {
+          heading: u.unit,
+          body: u.theory
+        };
+      });
 
       generateAndDownloadPDF(filename, subName, subHeader, sections);
     }
