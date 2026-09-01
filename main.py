@@ -685,7 +685,7 @@ async def analyze_resume(file: UploadFile = File(...), job_description: str = Fo
             "Week 1: Foundations",
             "Week 2: Advanced projects"
         ]
-    }}
+    }}cd InternWise\backend
     """
     response = client.models.generate_content(
         model="gemini-2.5-flash",
