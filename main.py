@@ -123,8 +123,7 @@ LOGIN_HTML = """<!DOCTYPE html>
 </body>
 </html>"""
 
-def render_dashboard(name: str, status: str):
-    return f"""<!DOCTYPE html>
+DASHBOARD_RAW_HTML = """<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -133,8 +132,8 @@ def render_dashboard(name: str, status: str):
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
-    body {{ font-family: 'Plus Jakarta Sans', sans-serif; }}
-    .tab-btn.active {{ background: linear-gradient(135deg, #10b981, #059669); color: #022c22; font-weight: 800; }}
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .tab-btn.active { background: linear-gradient(135deg, #10b981, #059669); color: #022c22; font-weight: 800; }
   </style>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen">
@@ -153,7 +152,7 @@ def render_dashboard(name: str, status: str):
             <h1 class="text-2xl font-black tracking-tight">Intern<span class="text-emerald-400">Wise</span></h1>
             <span class="px-2 py-0.5 text-[10px] font-bold rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">PRO</span>
           </div>
-          <p class="text-xs text-slate-400">Welcome, <strong class="text-white">{name}</strong> (<span class="text-emerald-400">{status}</span>)</p>
+          <p class="text-xs text-slate-400">Welcome, <strong class="text-white">__STUDENT_NAME__</strong> (<span class="text-emerald-400">__STUDENT_STATUS__</span>)</p>
         </div>
       </div>
 
@@ -323,182 +322,76 @@ def render_dashboard(name: str, status: str):
   </div>
 
   <script>
-    function switchTab(tabName) {{
-      document.querySelectorAll('.tab-btn').forEach(function(b) {{ b.classList.remove('active'); }});
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
       document.getElementById('tab-' + tabName).classList.add('active');
-      ['notes', 'doubt', 'pyq', 'mock', 'career'].forEach(function(s) {{
+      ['notes', 'doubt', 'pyq', 'mock', 'career'].forEach(function(s) {
         document.getElementById('section-' + s).classList.add('hidden');
-      }});
+      });
       document.getElementById('section-' + tabName).classList.remove('hidden');
-    }}
+    }
 
-    var academicDatabase = {{
-      "B.Tech": {{
+    var academicDatabase = {
+      "B.Tech": {
         "1": [
-          {{ name: "Engineering Mathematics I", topics: "Matrices, Calculus, Infinite Series, Multivariable Calculus" }},
-          {{ name: "Engineering Physics", topics: "Optics, Lasers, Quantum Mechanics, Nanotechnology, Fiber Optics" }},
-          {{ name: "Basic Electrical Engineering", topics: "DC/AC Circuits, Network Theorems, Transformers, Induction Motors" }},
-          {{ name: "Engineering Mechanics", topics: "Force Systems, Friction, Centroids, Kinematics & Dynamics" }},
-          {{ name: "Basic Mechanical Engineering", topics: "Thermodynamics, IC Engines, Refrigeration, Power Plants" }},
-          {{ name: "Professional Communication", topics: "Technical Writing, Grammar, Business Letters, Soft Skills" }}
+          { name: "Engineering Mathematics I", topics: "Matrices, Calculus, Infinite Series, Multivariable Calculus" },
+          { name: "Engineering Physics", topics: "Optics, Lasers, Quantum Mechanics, Nanotechnology, Fiber Optics" },
+          { name: "Basic Electrical Engineering", topics: "DC/AC Circuits, Network Theorems, Transformers, Induction Motors" },
+          { name: "Engineering Mechanics", topics: "Force Systems, Friction, Centroids, Kinematics & Dynamics" },
+          { name: "Basic Mechanical Engineering", topics: "Thermodynamics, IC Engines, Refrigeration, Power Plants" },
+          { name: "Professional Communication", topics: "Technical Writing, Grammar, Business Letters, Soft Skills" }
         ],
         "2": [
-          {{ name: "Programming in C", topics: "Pointers, Dynamic Memory, Recursion, Structures, File I/O" }},
-          {{ name: "Engineering Mathematics II", topics: "Differential Equations, Laplace Transforms, Fourier Series" }},
-          {{ name: "Engineering Chemistry", topics: "Water Technology, Polymers, Corrosion, Electrochemistry" }},
-          {{ name: "Basic Electronics Engineering", topics: "Semiconductors, Diodes, BJT, Operational Amplifiers" }},
-          {{ name: "Engineering Graphics & Design", topics: "Orthographic Projections, Isometric Projections, CAD Tools" }},
-          {{ name: "Environmental Science", topics: "Ecosystems, Pollution Control, Sustainable Development" }}
+          { name: "Programming in C", topics: "Pointers, Dynamic Memory, Recursion, Structures, File I/O" },
+          { name: "Engineering Mathematics II", topics: "Differential Equations, Laplace Transforms, Fourier Series" },
+          { name: "Engineering Chemistry", topics: "Water Technology, Polymers, Corrosion, Electrochemistry" },
+          { name: "Basic Electronics Engineering", topics: "Semiconductors, Diodes, BJT, Operational Amplifiers" },
+          { name: "Engineering Graphics & Design", topics: "Orthographic Projections, Isometric Projections, CAD Tools" },
+          { name: "Environmental Science", topics: "Ecosystems, Pollution Control, Sustainable Development" }
         ],
         "3": [
-          {{ name: "Data Structures & Algorithms (DSA)", topics: "Arrays, Linked Lists, Stacks, Queues, Trees, Graphs, Sorting & Searching" }},
-          {{ name: "Digital Logic & Design (DLD)", topics: "Boolean Algebra, K-Maps, MUX/DEMUX, Flip-Flops, Counters, Shift Registers" }},
-          {{ name: "Discrete Mathematical Structures", topics: "Set Theory, Relations, Group Theory, Graph Theory, Combinatorics" }},
-          {{ name: "Object Oriented Programming (Java/C++)", topics: "Classes, Objects, Inheritance, Polymorphism, Abstraction, Exception Handling" }},
-          {{ name: "Computer Organization & Architecture (COA)", topics: "Instruction Set, Pipelining, Memory Hierarchy, Cache Mapping, Control Unit" }},
-          {{ name: "Universal Human Values & Ethics", topics: "Self-Exploration, Harmony in Self, Society and Nature, Professional Ethics" }}
+          { name: "Data Structures & Algorithms (DSA)", topics: "Arrays, Linked Lists, Stacks, Queues, Trees, Graphs, Sorting & Searching" },
+          { name: "Digital Logic & Design (DLD)", topics: "Boolean Algebra, K-Maps, MUX/DEMUX, Flip-Flops, Counters, Shift Registers" },
+          { name: "Discrete Mathematical Structures", topics: "Set Theory, Relations, Group Theory, Graph Theory, Combinatorics" },
+          { name: "Object Oriented Programming (Java/C++)", topics: "Classes, Objects, Inheritance, Polymorphism, Abstraction, Exception Handling" },
+          { name: "Computer Organization & Architecture (COA)", topics: "Instruction Set, Pipelining, Memory Hierarchy, Cache Mapping, Control Unit" },
+          { name: "Universal Human Values & Ethics", topics: "Self-Exploration, Harmony in Self, Society and Nature, Professional Ethics" }
         ],
         "4": [
-          {{ name: "Operating Systems (OS)", topics: "Process Scheduling, Deadlocks, Memory Management, Virtual Memory, File Systems" }},
-          {{ name: "Database Management Systems (DBMS)", topics: "ER Modeling, Relational Algebra, SQL, Normalization (1NF-BCNF), Transactions" }},
-          {{ name: "Theory of Computation (TOC)", topics: "Finite Automata, Regular Expressions, CFL, Pushdown Automata, Turing Machines" }},
-          {{ name: "Design & Analysis of Algorithms (DAA)", topics: "Divide & Conquer, Dynamic Programming, Greedy Method, Backtracking, NP-Complete" }},
-          {{ name: "Software Engineering", topics: "SDLC Models, Agile, Scrum, Software Testing, SRS & Design Patterns" }},
-          {{ name: "Applied Mathematics III", topics: "Probability Distributions, Numerical Methods, Statistics, Curve Fitting" }}
+          { name: "Operating Systems (OS)", topics: "Process Scheduling, Deadlocks, Memory Management, Virtual Memory, File Systems" },
+          { name: "Database Management Systems (DBMS)", topics: "ER Modeling, Relational Algebra, SQL, Normalization (1NF-BCNF), Transactions" },
+          { name: "Theory of Computation (TOC)", topics: "Finite Automata, Regular Expressions, CFL, Pushdown Automata, Turing Machines" },
+          { name: "Design & Analysis of Algorithms (DAA)", topics: "Divide & Conquer, Dynamic Programming, Greedy Method, Backtracking, NP-Complete" },
+          { name: "Software Engineering", topics: "SDLC Models, Agile, Scrum, Software Testing, SRS & Design Patterns" },
+          { name: "Applied Mathematics III", topics: "Probability Distributions, Numerical Methods, Statistics, Curve Fitting" }
         ],
         "5": [
-          {{ name: "Computer Networks (CN)", topics: "OSI & TCP/IP Model, Flow/Error Control, Subnetting, Routing (RIP, OSPF, BGP)" }},
-          {{ name: "Compiler Design", topics: "Lexical Analysis, Top-Down/Bottom-Up Parsing, Intermediate Code, Code Optimization" }},
-          {{ name: "Web Technologies & Full Stack", topics: "HTML5/CSS3, JavaScript, React/Node.js basics, RESTful APIs, Web Security" }},
-          {{ name: "Cybersecurity & Cryptography", topics: "Symmetric/Asymmetric Ciphers, RSA, AES, Hash Functions, Network Security" }},
-          {{ name: "Microprocessors & Microcontrollers", topics: "8085/8086 Architecture, Assembly Programming, Interfacing, Interrupts" }}
+          { name: "Computer Networks (CN)", topics: "OSI & TCP/IP Model, Flow/Error Control, Subnetting, Routing (RIP, OSPF, BGP)" },
+          { name: "Compiler Design", topics: "Lexical Analysis, Top-Down/Bottom-Up Parsing, Intermediate Code, Code Optimization" },
+          { name: "Web Technologies & Full Stack", topics: "HTML5/CSS3, JavaScript, React/Node.js basics, RESTful APIs, Web Security" },
+          { name: "Cybersecurity & Cryptography", topics: "Symmetric/Asymmetric Ciphers, RSA, AES, Hash Functions, Network Security" },
+          { name: "Microprocessors & Microcontrollers", topics: "8085/8086 Architecture, Assembly Programming, Interfacing, Interrupts" }
         ],
         "6": [
-          {{ name: "Artificial Intelligence & Machine Learning", topics: "Search Algorithms, Supervised/Unsupervised Learning, Neural Networks" }},
-          {{ name: "Cloud Computing & DevOps", topics: "Virtualization, AWS/GCP Basics, Docker, Kubernetes, CI/CD Pipelines" }},
-          {{ name: "Data Warehousing & Data Mining", topics: "ETL, Data Cubes, Association Rules, Clustering, Classification" }},
-          {{ name: "Mobile App Development", topics: "Android/Flutter Architecture, UI Layouts, SQLite, Firebase Integration" }},
-          {{ name: "Internet of Things (IoT)", topics: "Sensors, Actuators, Arduino, Raspberry Pi, MQTT, IoT Cloud" }}
+          { name: "Artificial Intelligence & Machine Learning", topics: "Search Algorithms, Supervised/Unsupervised Learning, Neural Networks" },
+          { name: "Cloud Computing & DevOps", topics: "Virtualization, AWS/GCP Basics, Docker, Kubernetes, CI/CD Pipelines" },
+          { name: "Data Warehousing & Data Mining", topics: "ETL, Data Cubes, Association Rules, Clustering, Classification" },
+          { name: "Mobile App Development", topics: "Android/Flutter Architecture, UI Layouts, SQLite, Firebase Integration" },
+          { name: "Internet of Things (IoT)", topics: "Sensors, Actuators, Arduino, Raspberry Pi, MQTT, IoT Cloud" }
         ],
         "7": [
-          {{ name: "Distributed Systems & Cloud Systems", topics: "RPC, MapReduce, Consensus (Raft/Paxos), Microservices, CAP Theorem" }},
-          {{ name: "Deep Learning & NLP", topics: "CNN, RNN, LSTM, Transformers, Text Preprocessing, Embeddings" }},
-          {{ name: "Big Data Analytics", topics: "Hadoop Architecture, HDFS, Apache Spark, NoSQL (MongoDB, Cassandra)" }},
-          {{ name: "High Performance Computing", topics: "Parallel Computing, OpenMP, MPI, GPU CUDA Programming" }}
+          { name: "Distributed Systems & Cloud Systems", topics: "RPC, MapReduce, Consensus (Raft/Paxos), Microservices, CAP Theorem" },
+          { name: "Deep Learning & NLP", topics: "CNN, RNN, LSTM, Transformers, Text Preprocessing, Embeddings" },
+          { name: "Big Data Analytics", topics: "Hadoop Architecture, HDFS, Apache Spark, NoSQL (MongoDB, Cassandra)" },
+          { name: "High Performance Computing", topics: "Parallel Computing, OpenMP, MPI, GPU CUDA Programming" }
         ],
         "8": [
-          {{ name: "System Design & Architecture", topics: "Scalability, Load Balancing, Caching (Redis), Database Sharding, HLD/LLD" }},
-          {{ name: "Major Capstone Project Preparation", topics: "System Architecture, Testing, Deployment, Code Documentation, Viva Defense" }},
-          {{ name: "Entrepreneurship & Startup Management", topics: "Business Models, Lean Startup, Funding, IP & Patent Filing" }}
+          { name: "System Design & Architecture", topics: "Scalability, Load Balancing, Caching (Redis), Database Sharding, HLD/LLD" },
+          { name: "Major Capstone Project Preparation", topics: "System Architecture, Testing, Deployment, Code Documentation, Viva Defense" },
+          { name: "Entrepreneurship & Startup Management", topics: "Business Models, Lean Startup, Funding, IP & Patent Filing" }
         ]
-      }}
-    }};
-
-    function downloadStudyFile(filename, content) {{
-      var blob = new Blob([content], {{ type: 'text/plain;charset=utf-8' }});
-      var url = URL.createObjectURL(blob);
-      var link = document.createElement('a');
-      link.href = url;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    }}
-
-    function triggerNotesDownload(subName, topics, course, branch, sem) {{
-      var content = "=========================================================\\n" +
-                    "           INTERNWISE ACADEMIC STUDY NOTES               \\n" +
-                    "=========================================================\\n\\n" +
-                    "Subject: " + subName + "\\n" +
-                    "Course : " + course + " (" + branch + ") - Semester " + sem + "\\n" +
-                    "Status : Verified University Curriculum\\n\\n" +
-                    "---------------------------------------------------------\\n" +
-                    "KEY TOPICS & SYLLABUS BREAKDOWN:\\n" +
-                    "---------------------------------------------------------\\n" +
-                    topics.split(', ').map(function(t, i) {{ return (i + 1) + ". " + t; }}).join('\\n') + "\\n\\n" +
-                    "---------------------------------------------------------\\n" +
-                    "EXAM PREPARATION TIPS:\\n" +
-                    "- Practice numericals and logic derivations.\\n" +
-                    "- Draw architecture diagrams for descriptive questions.\\n" +
-                    "- Use InternWise AI Doubt Solver for step-by-step solutions.\\n\\n" +
-                    "Generated via InternWise Student Portal";
-
-      downloadStudyFile(subName.replace(/[^a-zA-Z0-9]/g, "_") + "_Notes.txt", content);
-    }}
-
-    function filterNotes() {{
-      var course = (document.getElementById('notesCourse') || {{}}).value || 'B.Tech';
-      var branch = (document.getElementById('notesBranch') || {{}}).value || 'CSE';
-      var sem = (document.getElementById('notesSem') || {{}}).value || '3';
-      var container = document.getElementById('notesCardsList');
-      if (!container) return;
-
-      var courseData = academicDatabase[course] || academicDatabase["B.Tech"];
-      var list = courseData[sem] || courseData["3"] || [];
-
-      var html = '';
-      list.forEach(function(item) {{
-        var safeName = item.name.replace(/'/g, "\\\\'");
-        var safeTopics = item.topics.replace(/'/g, "\\\\'");
-        html += '<div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 flex flex-col justify-between space-y-4 hover:border-emerald-500/40 transition">' +
-          '<div>' +
-            '<div class="flex items-center justify-between">' +
-              '<span class="text-xs font-bold text-emerald-400 uppercase tracking-wider">' + course + ' ' + branch + ' • Sem ' + sem + '</span>' +
-              '<span class="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-300">Verified</span>' +
-            '</div>' +
-            '<h3 class="text-base font-bold text-white mt-2">' + item.name + '</h3>' +
-            '<p class="text-xs text-slate-400 mt-2 leading-relaxed"><strong>Core Topics:</strong> ' + item.topics + '</p>' +
-          '</div>' +
-          '<button onclick="triggerNotesDownload(\\'' + safeName + '\\', \\'' + safeTopics + '\\', \\'' + course + '\\', \\'' + branch + '\\', \\'' + sem + '\\')" class="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-xs font-bold text-slate-950 flex items-center justify-center gap-2 cursor-pointer transition">' +
-            '<span>Download Notes</span>' +
-          '</button>' +
-        '</div>';
-      }});
-      container.innerHTML = html;
-    }}
-
-    var pyqData = [
-      {{ subject: "Data Structures & Algorithms", sem: "Semester 3", year: "2024 End-Term", marks: "100 Marks" }},
-      {{ subject: "Operating Systems", sem: "Semester 4", year: "2024 Mid-Term", marks: "50 Marks" }},
-      {{ subject: "Database Management Systems", sem: "Semester 4", year: "2023 End-Term", marks: "100 Marks" }},
-      {{ subject: "Computer Networks", sem: "Semester 5", year: "2024 End-Term", marks: "100 Marks" }}
-    ];
-
-    function triggerPyqDownload(subject, sem, year, marks) {{
-      var content = "=========================================================\\n" +
-                    "       UNIVERSITY END-SEMESTER EXAMINATION PAPER         \\n" +
-                    "=========================================================\\n\\n" +
-                    "Subject: " + subject + "\\n" +
-                    "Semester: " + sem + " | Session: " + year + "\\n" +
-                    "Maximum Marks: " + marks + " | Time Allowed: 3 Hours\\n\\n" +
-                    "---------------------------------------------------------\\n" +
-                    "SECTION A (Short Questions - 2 Marks Each)\\n" +
-                    "---------------------------------------------------------\\n" +
-                    "Q1. Define core principles and give complexity analysis.\\n" +
-                    "Q2. Explain practical applications of " + subject + ".\\n" +
-                    "Q3. Differentiate between primary algorithms and trade-offs.\\n\\n" +
-                    "---------------------------------------------------------\\n" +
-                    "SECTION B (Analytical Questions - 10 Marks Each)\\n" +
-                    "---------------------------------------------------------\\n" +
-                    "Q4. Explain complete architecture with diagram and execution trace.\\n" +
-                    "Q5. Compare performance benchmarks and edge cases.\\n\\n" +
-                    "Downloaded from InternWise PYQ Repository.";
-
-      downloadStudyFile(subject.replace(/[^a-zA-Z0-9]/g, "_") + "_" + year.replace(/[^a-zA-Z0-9]/g, "_") + "_PYQ.txt", content);
-    }}
-
-   function downloadStudyFile(filename, content) {
-      var blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-      var url = URL.createObjectURL(blob);
-      var link = document.createElement('a');
-      link.href = url;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    }
+      }
+    };
 
     function downloadStudyFile(filename, content) {
       var blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
@@ -523,6 +416,11 @@ def render_dashboard(name: str, status: str):
                     "KEY TOPICS & SYLLABUS BREAKDOWN:\\n" +
                     "---------------------------------------------------------\\n" +
                     topics.split(', ').map(function(t, i) { return (i + 1) + ". " + t; }).join('\\n') + "\\n\\n" +
+                    "---------------------------------------------------------\\n" +
+                    "EXAM PREPARATION TIPS:\\n" +
+                    "- Practice numericals and logic derivations.\\n" +
+                    "- Draw architecture diagrams for descriptive questions.\\n" +
+                    "- Use InternWise AI Doubt Solver for step-by-step solutions.\\n\\n" +
                     "Generated via InternWise Student Portal";
 
       downloadStudyFile(subName.replace(/[^a-zA-Z0-9]/g, "_") + "_Notes.txt", content);
@@ -607,87 +505,87 @@ def render_dashboard(name: str, status: str):
       container.innerHTML = html;
     }
 
-    async function askDoubtAI() {{
+    async function askDoubtAI() {
       var query = document.getElementById('askQuery').value;
       var course = document.getElementById('askCourse').value || 'B.Tech';
       var branch = document.getElementById('askBranch').value || 'CSE';
       var subject = document.getElementById('askSubject').value || 'Computer Science';
       var btn = document.getElementById('doubtSubmitBtn');
 
-      if (!query.trim()) {{ alert('Pehle apna doubt ya problem enter karein.'); return; }}
+      if (!query.trim()) { alert('Pehle apna doubt ya problem enter karein.'); return; }
       btn.disabled = true;
       btn.innerText = 'AI Assistant is solving...';
 
-      try {{
-        var res = await fetch('/api/btech-doubt-solver', {{
+      try {
+        var res = await fetch('/api/btech-doubt-solver', {
           method: 'POST',
-          headers: {{ 'Content-Type': 'application/json' }},
-          body: JSON.stringify({{ query: query, course: course, branch: branch, semester: 'All', subject: subject }})
-        }});
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: query, course: course, branch: branch, semester: 'All', subject: subject })
+        });
         var data = await res.json();
         document.getElementById('doubtSolutionText').textContent = data.solution || "No response received.";
         document.getElementById('doubtSolutionBox').classList.remove('hidden');
-        document.getElementById('doubtSolutionBox').scrollIntoView({{ behavior: 'smooth' }});
-      }} catch (e) {{
+        document.getElementById('doubtSolutionBox').scrollIntoView({ behavior: 'smooth' });
+      } catch (e) {
         alert('Server Connection Error: ' + e.message);
-      }} finally {{
+      } finally {
         btn.disabled = false;
         btn.innerText = 'Solve with AI Assistant';
-      }}
-    }}
+      }
+    }
 
-    var mockBank = {{
+    var mockBank = {
       "Data Structures & Algorithms": "Explain QuickSort time complexity in Worst, Best and Average cases with partition logic.",
       "Operating Systems": "What is Deadlock? List the four Coffman conditions and explain Banker's Algorithm.",
       "Database Management Systems": "Explain differences between 3NF and BCNF with schema decomposition examples.",
       "Computer Networks": "Explain the 3-Way Handshake mechanism in TCP and describe SYN flood attacks.",
       "Theory of Computation": "Explain the differences between DFA and NFA, and prove equivalence."
-    }};
+    };
 
-    function generateMockQ() {{
+    function generateMockQ() {
       var sub = document.getElementById('mockSubjectPick').value;
       document.getElementById('mockQuestionText').textContent = mockBank[sub] || 'Explain core principles and algorithms in ' + sub;
       document.getElementById('mockQuestionArea').classList.remove('hidden');
       document.getElementById('mockEvaluationResult').classList.add('hidden');
       document.getElementById('mockUserAns').value = '';
-    }}
+    }
 
-    async function submitMockGrading() {{
+    async function submitMockGrading() {
       var sub = document.getElementById('mockSubjectPick').value;
       var q = document.getElementById('mockQuestionText').textContent;
       var ans = document.getElementById('mockUserAns').value;
       var btn = document.getElementById('mockGradingBtn');
 
-      if (!ans.trim()) {{ alert('Pehle apna answer likhein.'); return; }}
+      if (!ans.trim()) { alert('Pehle apna answer likhein.'); return; }
       btn.disabled = true;
       btn.innerText = 'Grading with AI...';
 
-      try {{
-        var res = await fetch('/api/evaluate-mock-test', {{
+      try {
+        var res = await fetch('/api/evaluate-mock-test', {
           method: 'POST',
-          headers: {{ 'Content-Type': 'application/json' }},
-          body: JSON.stringify({{ subject: sub, question: q, user_answer: ans }})
-        }});
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ subject: sub, question: q, user_answer: ans })
+        });
         var data = await res.json();
         var out = document.getElementById('mockEvaluationResult');
         out.innerHTML = '<div class="flex justify-between items-center"><span class="font-bold text-white">Score: <strong class="text-emerald-400 text-lg">' + (data.score || '8') + '/10</strong></span></div>' +
           '<p class="text-slate-300"><strong>AI Feedback:</strong> ' + (data.feedback || 'Good attempt.') + '</p>' +
           '<p class="text-xs text-slate-400 border-t border-slate-800 pt-2"><strong class="text-emerald-400">Key Points:</strong> ' + (data.ideal_points || 'Cover time complexity and diagrams.') + '</p>';
         out.classList.remove('hidden');
-      }} catch (err) {{
+      } catch (err) {
         alert('Grading error: ' + err.message);
-      }} finally {{
+      } finally {
         btn.disabled = false;
         btn.innerText = 'Evaluate My Answer';
-      }}
-    }}
+      }
+    }
 
-    async function runResumeAnalysis() {{
+    async function runResumeAnalysis() {
       var fileInput = document.getElementById('resumeFile');
       var jobDesc = document.getElementById('jobDescription');
       var btn = document.getElementById('careerAnalyzeBtn');
 
-      if (!fileInput.files || fileInput.files.length === 0) {{ alert('PDF Resume select karein.'); return; }}
+      if (!fileInput.files || fileInput.files.length === 0) { alert('PDF Resume select karein.'); return; }
       btn.disabled = true;
       btn.innerText = 'Analyzing Resume with Gemini AI...';
 
@@ -695,10 +593,10 @@ def render_dashboard(name: str, status: str):
       formData.append('file', fileInput.files[0]);
       formData.append('job_description', jobDesc.value);
 
-      try {{
-        var res = await fetch('/api/analyze-resume', {{ method: 'POST', body: formData }});
+      try {
+        var res = await fetch('/api/analyze-resume', { method: 'POST', body: formData });
         var data = await res.json();
-        var analysis = data.ai_analysis || {{}};
+        var analysis = data.ai_analysis || {};
 
         document.getElementById('careerFilename').textContent = data.filename || 'Resume';
         document.getElementById('careerMatchScore').textContent = (analysis.match_percentage || 78) + '%';
@@ -712,20 +610,20 @@ def render_dashboard(name: str, status: str):
         document.getElementById('careerMissingSkills').innerHTML = mHtml;
 
         var rHtml = '';
-        (analysis.learning_roadmap || ['Week 1: Foundations & APIs', 'Week 2: Scalable Projects & Cloud Deployment']).forEach((step, i) => {{
+        (analysis.learning_roadmap || ['Week 1: Foundations & APIs', 'Week 2: Scalable Projects & Cloud Deployment']).forEach((step, i) => {
           rHtml += '<div class="flex items-start gap-2"><strong class="text-emerald-400">Step ' + (i+1) + ':</strong> <span>' + step + '</span></div>';
-        }});
+        });
         document.getElementById('careerRoadmap').innerHTML = rHtml;
 
         document.getElementById('careerResults').classList.remove('hidden');
-        document.getElementById('careerResults').scrollIntoView({{ behavior: 'smooth' }});
-      }} catch (err) {{
+        document.getElementById('careerResults').scrollIntoView({ behavior: 'smooth' });
+      } catch (err) {
         alert('Resume Error: ' + err.message);
-      }} finally {{
+      } finally {
         btn.disabled = false;
         btn.innerText = 'Analyze Resume Match with AI';
-      }}
-    }}
+      }
+    }
 
     filterNotes();
     loadPyqList();
@@ -740,7 +638,8 @@ def serve_login():
 
 @app.get("/dashboard", response_class=HTMLResponse)
 def serve_dashboard(name: str = "Aditya Kumar", status: str = "Currently Pursuing B.Tech / BE"):
-    return render_dashboard(name, status)
+    page = DASHBOARD_RAW_HTML.replace("__STUDENT_NAME__", name).replace("__STUDENT_STATUS__", status)
+    return HTMLResponse(content=page)
 
 @app.post("/api/btech-doubt-solver")
 async def btech_doubt_solver(req: DoubtRequest):
