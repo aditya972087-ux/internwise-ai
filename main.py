@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-app = FastAPI(title="InternWise Student & Career Portal", version="3.1.0")
+app = FastAPI(title="InternWise Student & Career Portal", version="3.2.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -57,7 +57,6 @@ HTML_PAGE = """<!DOCTYPE html>
   <div id="onboardingScreen" class="min-h-screen flex items-center justify-center p-4">
     <div class="max-w-xl w-full bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-10 shadow-2xl space-y-6">
       
-      <!-- Brand Header -->
       <div class="text-center space-y-2">
         <div class="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-500/30 text-slate-950">
           <svg class="w-8 h-8 text-slate-950" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -72,30 +71,29 @@ HTML_PAGE = """<!DOCTYPE html>
 
       <div class="border-t border-slate-800 pt-4">
         <h2 class="text-lg font-bold text-white mb-1">Create Student Profile</h2>
-        <p class="text-xs text-slate-400">Fill your details once to personalize your study notes, mock tests & career AI.</p>
+        <p class="text-xs text-slate-400">Fill details to personalize your study notes, mock tests & career AI.</p>
       </div>
 
-      <!-- Registration Form Container (div-based to prevent page refresh) -->
-      <div id="onboardingForm" class="space-y-4">
+      <div class="space-y-4">
         <div>
-          <label class="block text-xs font-semibold text-slate-300 mb-1">Full Name *</label>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Full Name</label>
           <input type="text" id="userName" placeholder="e.g. Rahul Sharma" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs sm:text-sm text-white focus:border-emerald-500 focus:outline-none" />
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label class="block text-xs font-semibold text-slate-300 mb-1">Email Address *</label>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Email Address</label>
             <input type="email" id="userEmail" placeholder="rahul@example.com" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs sm:text-sm text-white focus:border-emerald-500 focus:outline-none" />
           </div>
           <div>
-            <label class="block text-xs font-semibold text-slate-300 mb-1">Mobile Number *</label>
-            <input type="tel" id="userPhone" placeholder="+91 9876543210" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs sm:text-sm text-white focus:border-emerald-500 focus:outline-none" />
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Mobile Number</label>
+            <input type="text" id="userPhone" placeholder="+91 9876543210" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs sm:text-sm text-white focus:border-emerald-500 focus:outline-none" />
           </div>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label class="block text-xs font-semibold text-slate-300 mb-1">Gender *</label>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Gender</label>
             <select id="userGender" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs sm:text-sm text-white focus:border-emerald-500 focus:outline-none">
               <option value="Male">Male</option>
               <option value="Female">Female</option>
@@ -103,13 +101,13 @@ HTML_PAGE = """<!DOCTYPE html>
             </select>
           </div>
           <div>
-            <label class="block text-xs font-semibold text-slate-300 mb-1">Age *</label>
-            <input type="number" id="userAge" min="14" max="70" placeholder="e.g. 20" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs sm:text-sm text-white focus:border-emerald-500 focus:outline-none" />
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Age</label>
+            <input type="number" id="userAge" placeholder="e.g. 20" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs sm:text-sm text-white focus:border-emerald-500 focus:outline-none" />
           </div>
         </div>
 
         <div>
-          <label class="block text-xs font-semibold text-slate-300 mb-1">Academic Status *</label>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Academic Status</label>
           <select id="userStatus" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs sm:text-sm text-emerald-400 font-semibold focus:border-emerald-500 focus:outline-none">
             <option value="Currently Pursuing B.Tech / BE">Currently Pursuing B.Tech / BE</option>
             <option value="Currently Pursuing BCA / MCA">Currently Pursuing BCA / MCA</option>
@@ -118,7 +116,7 @@ HTML_PAGE = """<!DOCTYPE html>
           </select>
         </div>
 
-        <button type="button" onclick="handleOnboardingManual()" class="w-full py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-sm transition shadow-lg shadow-emerald-500/20 cursor-pointer">
+        <button type="button" id="enterPortalBtn" class="w-full py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-slate-950 font-black text-sm transition shadow-lg shadow-emerald-500/20 cursor-pointer">
           Enter InternWise Portal &rarr;
         </button>
       </div>
@@ -126,10 +124,9 @@ HTML_PAGE = """<!DOCTYPE html>
   </div>
 
 
-  <!-- ================= SCREEN 2: MAIN APPLICATION DASHBOARD ================= -->
+  <!-- ================= SCREEN 2: MAIN DASHBOARD ================= -->
   <div id="mainDashboard" class="hidden max-w-6xl mx-auto px-4 py-6">
     
-    <!-- Top Bar with User Profile Badge -->
     <header class="flex flex-col md:flex-row items-center justify-between gap-4 border-b border-slate-800 pb-6 mb-8">
       <div class="flex items-center gap-3.5">
         <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-500/30 text-slate-950">
@@ -149,13 +146,12 @@ HTML_PAGE = """<!DOCTYPE html>
       </div>
 
       <div class="flex items-center gap-3">
-        <!-- Navigation Tabs -->
         <nav class="flex flex-wrap gap-1.5 bg-slate-900/90 p-1.5 rounded-2xl border border-slate-800 text-xs sm:text-sm">
-          <button onclick="switchTab('notes')" id="tab-notes" class="tab-btn active px-3 sm:px-4 py-2 rounded-xl transition">Notes Hub</button>
-          <button onclick="switchTab('doubt')" id="tab-doubt" class="tab-btn px-3 sm:px-4 py-2 rounded-xl text-slate-300 hover:text-white transition">AI Doubt Solver</button>
-          <button onclick="switchTab('pyq')" id="tab-pyq" class="tab-btn px-3 sm:px-4 py-2 rounded-xl text-slate-300 hover:text-white transition">PYQs</button>
-          <button onclick="switchTab('mock')" id="tab-mock" class="tab-btn px-3 sm:px-4 py-2 rounded-xl text-slate-300 hover:text-white transition">Mock Test</button>
-          <button onclick="switchTab('career')" id="tab-career" class="tab-btn px-3 sm:px-4 py-2 rounded-xl text-slate-300 hover:text-white transition">Job & Career</button>
+          <button onclick="switchTab('notes')" id="tab-notes" class="tab-btn active px-3 sm:px-4 py-2 rounded-xl transition cursor-pointer">Notes Hub</button>
+          <button onclick="switchTab('doubt')" id="tab-doubt" class="tab-btn px-3 sm:px-4 py-2 rounded-xl text-slate-300 hover:text-white transition cursor-pointer">AI Doubt Solver</button>
+          <button onclick="switchTab('pyq')" id="tab-pyq" class="tab-btn px-3 sm:px-4 py-2 rounded-xl text-slate-300 hover:text-white transition cursor-pointer">PYQs</button>
+          <button onclick="switchTab('mock')" id="tab-mock" class="tab-btn px-3 sm:px-4 py-2 rounded-xl text-slate-300 hover:text-white transition cursor-pointer">Mock Test</button>
+          <button onclick="switchTab('career')" id="tab-career" class="tab-btn px-3 sm:px-4 py-2 rounded-xl text-slate-300 hover:text-white transition cursor-pointer">Job & Career</button>
         </nav>
         
         <button onclick="logoutProfile()" title="Change Profile" class="p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-white text-xs cursor-pointer">
@@ -164,13 +160,12 @@ HTML_PAGE = """<!DOCTYPE html>
       </div>
     </header>
 
-
-    <!-- ================= 1. NOTES HUB (Course -> Branch -> Semester Filter) ================= -->
+    <!-- 1. NOTES HUB -->
     <section id="section-notes" class="space-y-6">
       <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-6">
         <div>
           <h2 class="text-xl font-bold text-white">Academic Notes & Syllabus Finder</h2>
-          <p class="text-xs text-slate-400 mt-1">Select your exact course, engineering branch, and semester to view verified study notes.</p>
+          <p class="text-xs text-slate-400 mt-1">Select course, branch, and semester to view verified notes.</p>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -213,13 +208,12 @@ HTML_PAGE = """<!DOCTYPE html>
       <div id="notesCardsList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"></div>
     </section>
 
-
-    <!-- ================= 2. AI DOUBT & PROBLEM SOLVER ================= -->
+    <!-- 2. AI DOUBT SOLVER -->
     <section id="section-doubt" class="hidden space-y-6">
       <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-5">
         <div>
           <h2 class="text-xl font-bold text-white">24/7 AI Problem & Doubt Assistant</h2>
-          <p class="text-xs text-slate-400 mt-1">Get instant step-by-step solutions, code debugging, and concept clarity tailored to your syllabus.</p>
+          <p class="text-xs text-slate-400 mt-1">Get instant step-by-step solutions and code debugging.</p>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -228,7 +222,7 @@ HTML_PAGE = """<!DOCTYPE html>
           <input type="text" id="askSubject" placeholder="Subject (e.g. DBMS / OS / DSA)" class="bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 focus:border-emerald-500 focus:outline-none" />
         </div>
 
-        <textarea id="askQuery" rows="4" placeholder="Paste your question, coding bug, derivation or theoretical doubt here..." class="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-xs sm:text-sm text-slate-200 focus:border-emerald-500 focus:outline-none resize-none"></textarea>
+        <textarea id="askQuery" rows="4" placeholder="Paste your question or doubt here..." class="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-xs sm:text-sm text-slate-200 focus:border-emerald-500 focus:outline-none resize-none"></textarea>
 
         <button onclick="askDoubtAI()" id="doubtSubmitBtn" class="w-full py-3.5 rounded-xl bg-emerald-500 text-slate-950 font-bold hover:bg-emerald-400 transition cursor-pointer">
           Solve with AI Assistant
@@ -236,28 +230,26 @@ HTML_PAGE = """<!DOCTYPE html>
       </div>
 
       <div id="doubtSolutionBox" class="hidden bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4">
-        <h3 class="text-sm font-bold text-emerald-400 uppercase tracking-wider">AI Solution & Step-by-Step Breakdown</h3>
+        <h3 class="text-sm font-bold text-emerald-400 uppercase tracking-wider">AI Solution</h3>
         <div id="doubtSolutionText" class="text-sm text-slate-200 whitespace-pre-wrap leading-relaxed"></div>
       </div>
     </section>
 
-
-    <!-- ================= 3. PREVIOUS YEAR PAPERS (PYQ) ================= -->
+    <!-- 3. PYQs -->
     <section id="section-pyq" class="hidden space-y-6">
       <div>
         <h2 class="text-xl font-bold text-white">Previous Year Question Papers (PYQs)</h2>
-        <p class="text-xs text-slate-400">Download and solve past university exam question papers</p>
+        <p class="text-xs text-slate-400">Download and solve past university exam papers</p>
       </div>
       <div id="pyqList" class="grid grid-cols-1 md:grid-cols-2 gap-5"></div>
     </section>
 
-
-    <!-- ================= 4. AI SUBJECT MOCK TESTS ================= -->
+    <!-- 4. MOCK TESTS -->
     <section id="section-mock" class="hidden space-y-6">
       <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-5">
         <div>
           <h2 class="text-xl font-bold text-white">Subject Mock Test & AI Evaluator</h2>
-          <p class="text-xs text-slate-400 mt-1">Pick your subject, generate university-level questions, and receive instant AI evaluation & grading.</p>
+          <p class="text-xs text-slate-400 mt-1">Generate questions and receive instant AI grading.</p>
         </div>
 
         <div class="flex flex-col sm:flex-row gap-4">
@@ -266,15 +258,14 @@ HTML_PAGE = """<!DOCTYPE html>
             <option value="Operating Systems">Operating Systems (OS)</option>
             <option value="Database Management Systems">Database Management Systems (DBMS)</option>
             <option value="Computer Networks">Computer Networks (CN)</option>
-            <option value="Theory of Computation">Theory of Computation (TOC)</option>
           </select>
           <button onclick="generateMockQ()" class="px-6 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-100 text-sm font-bold border border-slate-700 cursor-pointer">Generate Question</button>
         </div>
 
         <div id="mockQuestionArea" class="hidden bg-slate-950 p-5 rounded-2xl border border-slate-800 space-y-4">
-          <span class="text-xs font-bold text-emerald-400 uppercase tracking-wide">University Standard Question:</span>
+          <span class="text-xs font-bold text-emerald-400 uppercase tracking-wide">University Question:</span>
           <p id="mockQuestionText" class="text-sm font-semibold text-white"></p>
-          <textarea id="mockUserAns" rows="4" placeholder="Write your complete technical answer here..." class="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs sm:text-sm text-slate-200 focus:border-emerald-500 focus:outline-none"></textarea>
+          <textarea id="mockUserAns" rows="4" placeholder="Write your answer here..." class="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs sm:text-sm text-slate-200 focus:border-emerald-500 focus:outline-none"></textarea>
           <button onclick="submitMockGrading()" id="mockGradingBtn" class="px-5 py-2.5 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs hover:bg-emerald-400 cursor-pointer">Evaluate My Answer</button>
         </div>
 
@@ -282,13 +273,12 @@ HTML_PAGE = """<!DOCTYPE html>
       </div>
     </section>
 
-
-    <!-- ================= 5. JOB REQUIREMENTS & RESUME AI ================= -->
+    <!-- 5. JOB & CAREER -->
     <section id="section-career" class="hidden space-y-6">
       <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-5">
         <div>
           <h2 class="text-xl font-bold text-white">Job Requirements & Resume Gap Analysis</h2>
-          <p class="text-xs text-slate-400 mt-1">Upload your resume and match it against actual job descriptions for skill gaps, roadmaps & AI mock interviews.</p>
+          <p class="text-xs text-slate-400 mt-1">Upload resume to match against job descriptions.</p>
         </div>
 
         <div class="space-y-4">
@@ -298,8 +288,8 @@ HTML_PAGE = """<!DOCTYPE html>
           </div>
 
           <div>
-            <label class="block text-xs font-semibold text-slate-300 mb-2">Target Job Requirements & Description</label>
-            <textarea id="jobDescription" rows="3" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs sm:text-sm text-slate-200 focus:border-emerald-500 focus:outline-none resize-none">Looking for a Software Development Engineer (SDE) Intern with proficiency in Python/Java, Data Structures, SQL/DBMS, and Git.</textarea>
+            <label class="block text-xs font-semibold text-slate-300 mb-2">Target Job Description</label>
+            <textarea id="jobDescription" rows="3" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs sm:text-sm text-slate-200 focus:border-emerald-500 focus:outline-none resize-none">Looking for a Software Development Engineer (SDE) Intern with proficiency in Python/Java, Data Structures, SQL, and Git.</textarea>
           </div>
 
           <button type="button" id="careerAnalyzeBtn" onclick="runResumeAnalysis()" class="w-full py-3.5 rounded-xl font-bold bg-emerald-500 text-slate-950 hover:bg-emerald-400 transition text-sm cursor-pointer">
@@ -308,7 +298,6 @@ HTML_PAGE = """<!DOCTYPE html>
         </div>
       </div>
 
-      <!-- Resume Results -->
       <div id="careerResults" class="hidden space-y-6">
         <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 flex flex-col sm:flex-row justify-between items-center gap-4">
           <div>
@@ -330,7 +319,7 @@ HTML_PAGE = """<!DOCTYPE html>
         </div>
 
         <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4">
-          <h4 class="text-base font-bold text-emerald-400">2-Week Fast-Track Learning Roadmap</h4>
+          <h4 class="text-base font-bold text-emerald-400">2-Week Learning Roadmap</h4>
           <div id="careerRoadmap" class="space-y-2 text-sm text-slate-300"></div>
         </div>
       </div>
@@ -339,79 +328,82 @@ HTML_PAGE = """<!DOCTYPE html>
   </div>
 
   <script>
-    // --- 1. USER PROFILE / ONBOARDING LOGIC ---
-    function checkExistingProfile() {
-      var savedProfile = localStorage.getItem('internwise_user');
-      if (savedProfile) {
-        try {
-          var user = JSON.parse(savedProfile);
-          document.getElementById('greetingName').textContent = user.name || 'Student';
-          document.getElementById('greetingStatus').textContent = user.status || 'B.Tech';
-          document.getElementById('onboardingScreen').classList.add('hidden');
-          document.getElementById('mainDashboard').classList.remove('hidden');
-          filterNotes();
-          loadPyqList();
-        } catch (e) {
-          localStorage.removeItem('internwise_user');
-        }
-      }
-    }
-
-    function handleOnboardingManual() {
-      var name = document.getElementById('userName').value.trim();
-      var email = document.getElementById('userEmail').value.trim();
-      var phone = document.getElementById('userPhone').value.trim();
-      var gender = document.getElementById('userGender').value;
-      var age = document.getElementById('userAge').value.trim();
-      var status = document.getElementById('userStatus').value;
-
-      if (!name || !email || !phone || !age) {
-        alert('Kripya sabhi fields (Name, Email, Phone, Age) complete bharein.');
-        return;
-      }
-
-      var user = {
-        name: name,
-        email: email,
-        phone: phone,
-        gender: gender,
-        age: age,
-        status: status
-      };
-
-      try {
-        localStorage.setItem('internwise_user', JSON.stringify(user));
-      } catch (err) {
-        console.error('LocalStorage error:', err);
-      }
-
-      document.getElementById('greetingName').textContent = user.name;
-      document.getElementById('greetingStatus').textContent = user.status;
+    function transitionToDashboard(user) {
+      document.getElementById('greetingName').textContent = user.name || 'Student';
+      document.getElementById('greetingStatus').textContent = user.status || 'B.Tech';
       document.getElementById('onboardingScreen').classList.add('hidden');
       document.getElementById('mainDashboard').classList.remove('hidden');
-
       filterNotes();
       loadPyqList();
     }
 
-    function logoutProfile() {
-      if (confirm('Switch student profile?')) {
+    function checkExistingProfile() {
+      try {
+        var saved = localStorage.getItem('internwise_user');
+        if (saved) {
+          var user = JSON.parse(saved);
+          transitionToDashboard(user);
+        }
+      } catch (e) {
         localStorage.removeItem('internwise_user');
-        location.reload();
       }
     }
 
-    // --- 2. TABS SWITCHER ---
-    function switchTab(tabName) {
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      document.getElementById('tab-' + tabName).classList.add('active');
-      ['notes', 'doubt', 'pyq', 'mock', 'career'].forEach(s => {
-        document.getElementById('section-' + s).classList.add('hidden');
-      });
-      document.getElementById('section-' + tabName).classList.remove('hidden');
+    function handleEnterPortal() {
+      var nameVal = (document.getElementById('userName').value || '').trim();
+      var emailVal = (document.getElementById('userEmail').value || '').trim();
+      var phoneVal = (document.getElementById('userPhone').value || '').trim();
+      var genderVal = document.getElementById('userGender').value || 'Male';
+      var ageVal = (document.getElementById('userAge').value || '').trim();
+      var statusVal = document.getElementById('userStatus').value || 'Currently Pursuing B.Tech / BE';
+
+      var user = {
+        name: nameVal || 'Student',
+        email: emailVal || 'student@internwise.com',
+        phone: phoneVal || '9876543210',
+        gender: genderVal,
+        age: ageVal || '20',
+        status: statusVal
+      };
+
+      try {
+        localStorage.setItem('internwise_user', JSON.stringify(user));
+      } catch (e) {
+        console.error('LocalStorage write error:', e);
+      }
+
+      transitionToDashboard(user);
     }
 
-    // --- 3. NOTES REPOSITORY ---
+    // Direct Event Binding
+    document.addEventListener('DOMContentLoaded', function() {
+      var btn = document.getElementById('enterPortalBtn');
+      if (btn) {
+        btn.addEventListener('click', handleEnterPortal);
+      }
+      checkExistingProfile();
+    });
+
+    function logoutProfile() {
+      try {
+        localStorage.removeItem('internwise_user');
+      } catch(e) {}
+      location.reload();
+    }
+
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+      var activeBtn = document.getElementById('tab-' + tabName);
+      if (activeBtn) activeBtn.classList.add('active');
+
+      ['notes', 'doubt', 'pyq', 'mock', 'career'].forEach(function(s) {
+        var el = document.getElementById('section-' + s);
+        if (el) el.classList.add('hidden');
+      });
+      var targetSection = document.getElementById('section-' + tabName);
+      if (targetSection) targetSection.classList.remove('hidden');
+    }
+
     var academicDatabase = {
       "B.Tech": {
         "1": [
@@ -456,10 +448,11 @@ HTML_PAGE = """<!DOCTYPE html>
     };
 
     function filterNotes() {
-      var course = document.getElementById('notesCourse').value;
-      var branch = document.getElementById('notesBranch').value;
-      var sem = document.getElementById('notesSem').value;
+      var course = (document.getElementById('notesCourse') || {}).value || 'B.Tech';
+      var branch = (document.getElementById('notesBranch') || {}).value || 'CSE';
+      var sem = (document.getElementById('notesSem') || {}).value || '3';
       var container = document.getElementById('notesCardsList');
+      if (!container) return;
 
       var courseData = academicDatabase[course] || academicDatabase["B.Tech"];
       var list = courseData[sem] || courseData["3"] || [];
@@ -475,7 +468,7 @@ HTML_PAGE = """<!DOCTYPE html>
             '<h3 class="text-base font-bold text-white mt-2">' + item.name + '</h3>' +
             '<p class="text-xs text-slate-400 mt-2 leading-relaxed"><strong>Core Topics:</strong> ' + item.topics + '</p>' +
           '</div>' +
-          '<button onclick="alert(\'Downloading verified study notes for ' + item.name + '...\')" class="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 border border-slate-700 flex items-center justify-center gap-2 cursor-pointer">' +
+          '<button onclick="alert(\'Downloading verified notes for ' + item.name + '...\')" class="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 border border-slate-700 flex items-center justify-center gap-2 cursor-pointer">' +
             '<span>Download Notes (PDF)</span>' +
           '</button>' +
         '</div>';
@@ -483,17 +476,16 @@ HTML_PAGE = """<!DOCTYPE html>
       container.innerHTML = html;
     }
 
-    // --- 4. PYQ LIST ---
     var pyqData = [
       { subject: "Data Structures & Algorithms", sem: "Semester 3", year: "2024 End-Term", marks: "100 Marks" },
       { subject: "Operating Systems", sem: "Semester 4", year: "2024 Mid-Term", marks: "50 Marks" },
       { subject: "Database Management Systems", sem: "Semester 4", year: "2023 End-Term", marks: "100 Marks" },
-      { subject: "Computer Networks", sem: "Semester 5", year: "2024 End-Term", marks: "100 Marks" },
-      { subject: "Design & Analysis of Algorithms", sem: "Semester 5", year: "2023 End-Term", marks: "100 Marks" }
+      { subject: "Computer Networks", sem: "Semester 5", year: "2024 End-Term", marks: "100 Marks" }
     ];
 
     function loadPyqList() {
       var container = document.getElementById('pyqList');
+      if (!container) return;
       var html = '';
       pyqData.forEach(function(p) {
         html += '<div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 flex items-center justify-between hover:border-emerald-500/40 transition">' +
@@ -508,7 +500,6 @@ HTML_PAGE = """<!DOCTYPE html>
       container.innerHTML = html;
     }
 
-    // --- 5. AI DOUBT SOLVER ---
     async function askDoubtAI() {
       var query = document.getElementById('askQuery').value;
       var course = document.getElementById('askCourse').value || 'B.Tech';
@@ -516,10 +507,9 @@ HTML_PAGE = """<!DOCTYPE html>
       var subject = document.getElementById('askSubject').value || 'Computer Science';
       var btn = document.getElementById('doubtSubmitBtn');
 
-      if (!query.trim()) { alert('Pehle apna doubt ya problem statement enter karein.'); return; }
-
+      if (!query.trim()) { alert('Pehle apna doubt ya problem enter karein.'); return; }
       btn.disabled = true;
-      btn.innerText = 'AI Assistant is solving... Please wait...';
+      btn.innerText = 'AI Assistant is solving...';
 
       try {
         var res = await fetch('/api/btech-doubt-solver', {
@@ -530,27 +520,24 @@ HTML_PAGE = """<!DOCTYPE html>
         var data = await res.json();
         document.getElementById('doubtSolutionText').textContent = data.solution;
         document.getElementById('doubtSolutionBox').classList.remove('hidden');
-        document.getElementById('doubtSolutionBox').scrollIntoView({ behavior: 'smooth' });
       } catch (e) {
-        alert('Doubt Solver Error: ' + e.message);
+        alert('Error: ' + e.message);
       } finally {
         btn.disabled = false;
         btn.innerText = 'Solve with AI Assistant';
       }
     }
 
-    // --- 6. MOCK TESTS ---
     var mockBank = {
-      "Data Structures & Algorithms": "Explain the time complexity of QuickSort in Worst, Best and Average cases along with partition logic.",
-      "Operating Systems": "What is Deadlock? List the four necessary Coffman conditions and explain how Banker's Algorithm prevents it.",
-      "Database Management Systems": "Explain the differences between 3NF and BCNF with a suitable schema decomposition example.",
-      "Computer Networks": "Explain the 3-Way Handshake mechanism in TCP and describe how SYN Flood attacks occur.",
-      "Theory of Computation": "Explain the differences between DFA and NFA, and prove that every NFA can be converted to an equivalent DFA."
+      "Data Structures & Algorithms": "Explain QuickSort time complexity in Worst, Best and Average cases with partition logic.",
+      "Operating Systems": "What is Deadlock? List the four Coffman conditions and explain Banker's Algorithm.",
+      "Database Management Systems": "Explain differences between 3NF and BCNF with schema decomposition examples.",
+      "Computer Networks": "Explain the 3-Way Handshake mechanism in TCP and describe SYN flood attacks."
     };
 
     function generateMockQ() {
       var sub = document.getElementById('mockSubjectPick').value;
-      document.getElementById('mockQuestionText').textContent = mockBank[sub] || 'Explain core principles and algorithms in ' + sub;
+      document.getElementById('mockQuestionText').textContent = mockBank[sub] || 'Explain core concepts in ' + sub;
       document.getElementById('mockQuestionArea').classList.remove('hidden');
       document.getElementById('mockEvaluationResult').classList.add('hidden');
       document.getElementById('mockUserAns').value = '';
@@ -562,9 +549,9 @@ HTML_PAGE = """<!DOCTYPE html>
       var ans = document.getElementById('mockUserAns').value;
       var btn = document.getElementById('mockGradingBtn');
 
-      if (!ans.trim()) { alert('Kripya pehle apna answer likhein.'); return; }
+      if (!ans.trim()) { alert('Pehle apna answer likhein.'); return; }
       btn.disabled = true;
-      btn.innerText = 'Grading with AI...';
+      btn.innerText = 'Grading...';
 
       try {
         var res = await fetch('/api/evaluate-mock-test', {
@@ -576,7 +563,7 @@ HTML_PAGE = """<!DOCTYPE html>
         var out = document.getElementById('mockEvaluationResult');
         out.innerHTML = '<div class="flex justify-between items-center"><span class="font-bold text-white">Score: <strong class="text-emerald-400 text-lg">' + data.score + '/10</strong></span></div>' +
           '<p class="text-slate-300"><strong>AI Feedback:</strong> ' + data.feedback + '</p>' +
-          '<p class="text-xs text-slate-400 border-t border-slate-800 pt-2"><strong class="text-emerald-400">Key Points for 10/10:</strong> ' + data.ideal_points + '</p>';
+          '<p class="text-xs text-slate-400 border-t border-slate-800 pt-2"><strong class="text-emerald-400">Key Points:</strong> ' + data.ideal_points + '</p>';
         out.classList.remove('hidden');
       } catch (err) {
         alert('Grading error: ' + err.message);
@@ -586,7 +573,6 @@ HTML_PAGE = """<!DOCTYPE html>
       }
     }
 
-    // --- 7. RESUME / CAREER AI ---
     async function runResumeAnalysis() {
       var fileInput = document.getElementById('resumeFile');
       var jobDesc = document.getElementById('jobDescription');
@@ -594,7 +580,7 @@ HTML_PAGE = """<!DOCTYPE html>
 
       if (!fileInput.files || fileInput.files.length === 0) { alert('PDF Resume select karein.'); return; }
       btn.disabled = true;
-      btn.innerText = 'Analyzing Resume with Gemini AI...';
+      btn.innerText = 'Analyzing Resume...';
 
       var formData = new FormData();
       formData.append('file', fileInput.files[0]);
@@ -623,7 +609,6 @@ HTML_PAGE = """<!DOCTYPE html>
         document.getElementById('careerRoadmap').innerHTML = rHtml;
 
         document.getElementById('careerResults').classList.remove('hidden');
-        document.getElementById('careerResults').scrollIntoView({ behavior: 'smooth' });
       } catch (err) {
         alert('Resume Error: ' + err.message);
       } finally {
@@ -631,9 +616,6 @@ HTML_PAGE = """<!DOCTYPE html>
         btn.innerText = 'Analyze Resume Match with AI';
       }
     }
-
-    // Startup check
-    checkExistingProfile();
   </script>
 </body>
 </html>"""
@@ -653,10 +635,10 @@ async def btech_doubt_solver(req: DoubtRequest):
     Branch: {req.branch}
     Subject: {req.subject}
 
-    Student Query / Problem:
+    Student Query:
     {req.query}
 
-    Provide a crystal-clear, step-by-step educational solution with code, diagrams/flow representation, and key points for university exams.
+    Provide a crystal-clear, step-by-step educational solution with code and exam points.
     """
     response = client.models.generate_content(
         model="gemini-2.5-flash",
