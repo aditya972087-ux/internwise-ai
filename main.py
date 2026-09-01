@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-app = FastAPI(title="InternWise BTech Suite", version="2.0.0")
+app = FastAPI(title="InternWise Student & Career Portal", version="3.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -27,6 +27,8 @@ client = genai.Client(api_key=api_key) if api_key else None
 
 class DoubtRequest(BaseModel):
     query: str
+    course: str
+    branch: str
     semester: str
     subject: str
 
@@ -40,162 +42,297 @@ HTML_PAGE = """<!DOCTYPE html>
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>InternWise - B.Tech CSE Study & Career Hub</title>
+  <title>InternWise - Student Academic & Career Portal</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2310b981' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><path d='M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5'/></svg>">
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     body { font-family: 'Plus Jakarta Sans', sans-serif; }
-    .tab-btn.active { background-color: #10b981; color: #022c22; font-weight: 700; }
+    .tab-btn.active { background: linear-gradient(135deg, #10b981, #059669); color: #022c22; font-weight: 800; shadow: 0 4px 14px 0 rgba(16, 185, 129, 0.39); }
   </style>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen">
-  <div class="max-w-6xl mx-auto px-4 py-8">
+
+  <!-- ================= SCREEN 1: ONBOARDING / PROFILE ENTRY ================= -->
+  <div id="onboardingScreen" class="min-h-screen flex items-center justify-center p-4">
+    <div class="max-w-xl w-full bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-10 shadow-2xl space-y-6">
+      
+      <!-- Brand Logo in Onboarding -->
+      <div class="text-center space-y-2">
+        <div class="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-500/30 text-slate-950">
+          <svg class="w-8 h-8 text-slate-950" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+            <path d="M2 17l10 5 10-5"></path>
+            <path d="M2 12l10 5 10-5"></path>
+          </svg>
+        </div>
+        <h1 class="text-3xl font-black tracking-tight">Intern<span class="text-emerald-400">Wise</span></h1>
+        <p class="text-xs sm:text-sm text-slate-400">Student Academic Portal & Career AI Suite</p>
+      </div>
+
+      <div class="border-t border-slate-800 pt-4">
+        <h2 class="text-lg font-bold text-white mb-1">Create Student Profile</h2>
+        <p class="text-xs text-slate-400">Fill your details once to personalize your study notes, mock tests & career AI.</p>
+      </div>
+
+      <form id="onboardingForm" onsubmit="handleOnboarding(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Full Name *</label>
+          <input type="text" id="userName" required placeholder="e.g. Rahul Sharma" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs sm:text-sm text-white focus:border-emerald-500 focus:outline-none" />
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Email Address *</label>
+            <input type="email" id="userEmail" required placeholder="rahul@example.com" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs sm:text-sm text-white focus:border-emerald-500 focus:outline-none" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Mobile Number *</label>
+            <input type="tel" id="userPhone" required placeholder="+91 9876543210" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs sm:text-sm text-white focus:border-emerald-500 focus:outline-none" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Gender *</label>
+            <select id="userGender" required class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs sm:text-sm text-white focus:border-emerald-500 focus:outline-none">
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Age *</label>
+            <input type="number" id="userAge" min="14" max="70" required placeholder="e.g. 20" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs sm:text-sm text-white focus:border-emerald-500 focus:outline-none" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Academic Status *</label>
+          <select id="userStatus" required class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs sm:text-sm text-emerald-400 font-semibold focus:border-emerald-500 focus:outline-none">
+            <option value="Currently Pursuing B.Tech">Currently Pursuing B.Tech / BE</option>
+            <option value="Currently Pursuing BCA / MCA">Currently Pursuing BCA / MCA</option>
+            <option value="Currently Pursuing Diploma">Currently Pursuing Diploma / Polytechnic</option>
+            <option value="Completed Degree / Job Seeking">Completed Course / Graduate</option>
+          </select>
+        </div>
+
+        <button type="submit" class="w-full py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-sm transition shadow-lg shadow-emerald-500/20 cursor-pointer">
+          Enter InternWise Portal &rarr;
+        </button>
+      </form>
+    </div>
+  </div>
+
+
+  <!-- ================= SCREEN 2: MAIN APPLICATION DASHBOARD ================= -->
+  <div id="mainDashboard" class="hidden max-w-6xl mx-auto px-4 py-6">
     
-    <!-- Navbar / Header -->
+    <!-- Top Bar with User Profile Badge -->
     <header class="flex flex-col md:flex-row items-center justify-between gap-4 border-b border-slate-800 pb-6 mb-8">
       <div class="flex items-center gap-3.5">
-        <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-500/30 text-slate-950">
-          <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-500/30 text-slate-950">
+          <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
             <path d="M2 17l10 5 10-5"></path>
             <path d="M2 12l10 5 10-5"></path>
           </svg>
         </div>
         <div>
-          <h1 class="text-2xl font-extrabold tracking-tight">Intern<span class="text-emerald-400">Wise</span></h1>
-          <p class="text-xs text-slate-400">B.Tech CSE Academic & AI Career Platform</p>
+          <div class="flex items-center gap-2">
+            <h1 class="text-2xl font-black tracking-tight">Intern<span class="text-emerald-400">Wise</span></h1>
+            <span class="px-2 py-0.5 text-[10px] font-bold rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">PRO</span>
+          </div>
+          <p class="text-xs text-slate-400">Hello, <strong id="greetingName" class="text-white">Student</strong> (<span id="greetingStatus" class="text-emerald-400">B.Tech</span>)</p>
         </div>
       </div>
 
-      <!-- Navigation Tabs -->
-      <nav class="flex flex-wrap gap-2 bg-slate-900/90 p-1.5 rounded-2xl border border-slate-800 text-xs sm:text-sm">
-        <button onclick="switchTab('notes')" id="tab-notes" class="tab-btn active px-4 py-2 rounded-xl transition">8 Sem Notes</button>
-        <button onclick="switchTab('doubt')" id="tab-doubt" class="tab-btn px-4 py-2 rounded-xl text-slate-300 hover:text-white transition">AI Doubt Solver</button>
-        <button onclick="switchTab('pyq')" id="tab-pyq" class="tab-btn px-4 py-2 rounded-xl text-slate-300 hover:text-white transition">PYQ Papers</button>
-        <button onclick="switchTab('mock')" id="tab-mock" class="tab-btn px-4 py-2 rounded-xl text-slate-300 hover:text-white transition">Mock Test</button>
-        <button onclick="switchTab('career')" id="tab-career" class="tab-btn px-4 py-2 rounded-xl text-slate-300 hover:text-white transition">Resume AI</button>
-      </nav>
+      <div class="flex items-center gap-3">
+        <!-- Navigation Tabs -->
+        <nav class="flex flex-wrap gap-1.5 bg-slate-900/90 p-1.5 rounded-2xl border border-slate-800 text-xs sm:text-sm">
+          <button onclick="switchTab('notes')" id="tab-notes" class="tab-btn active px-3 sm:px-4 py-2 rounded-xl transition">Notes Hub</button>
+          <button onclick="switchTab('doubt')" id="tab-doubt" class="tab-btn px-3 sm:px-4 py-2 rounded-xl text-slate-300 hover:text-white transition">AI Doubt Solver</button>
+          <button onclick="switchTab('pyq')" id="tab-pyq" class="tab-btn px-3 sm:px-4 py-2 rounded-xl text-slate-300 hover:text-white transition">PYQs</button>
+          <button onclick="switchTab('mock')" id="tab-mock" class="tab-btn px-3 sm:px-4 py-2 rounded-xl text-slate-300 hover:text-white transition">Mock Test</button>
+          <button onclick="switchTab('career')" id="tab-career" class="tab-btn px-3 sm:px-4 py-2 rounded-xl text-slate-300 hover:text-white transition">Job & Career</button>
+        </nav>
+        
+        <button onclick="logoutProfile()" title="Change Profile" class="p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-white text-xs">
+          &#x21bb; Switch
+        </button>
+      </div>
     </header>
 
-    <!-- SECTION 1: 8 SEMESTER NOTES -->
+
+    <!-- ================= 1. NOTES HUB (Course -> Branch -> Semester Filter) ================= -->
     <section id="section-notes" class="space-y-6">
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-6">
         <div>
-          <h2 class="text-xl font-bold text-white">B.Tech CSE Semester Notes</h2>
-          <p class="text-xs text-slate-400">Select semester to access syllabus, revision notes and key concepts</p>
+          <h2 class="text-xl font-bold text-white">Academic Notes & Syllabus Finder</h2>
+          <p class="text-xs text-slate-400 mt-1">Select your exact course, engineering branch, and semester to view personalized study notes.</p>
         </div>
-        <select id="semSelect" onchange="loadSemData()" class="bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-emerald-400 font-semibold focus:outline-none focus:border-emerald-500">
-          <option value="1">Semester 1 (Engineering Fundamentals)</option>
-          <option value="2">Semester 2 (Programming & Electrical)</option>
-          <option value="3">Semester 3 (DSA, Digital Logic, Discrete Math)</option>
-          <option value="4">Semester 4 (OS, DBMS, Computer Org)</option>
-          <option value="5">Semester 5 (DAA, Networks, Software Eng)</option>
-          <option value="6">Semester 6 (Compiler, AI/ML, Cloud)</option>
-          <option value="7">Semester 7 (Cybersecurity, Distributed Systems)</option>
-          <option value="8">Semester 8 (Major Project & Industry Electives)</option>
-        </select>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">1. Select Course</label>
+            <select id="notesCourse" onchange="filterNotes()" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs sm:text-sm text-emerald-400 font-semibold focus:border-emerald-500 focus:outline-none">
+              <option value="B.Tech">B.Tech / B.E.</option>
+              <option value="BCA">BCA</option>
+              <option value="MCA">MCA</option>
+              <option value="Diploma">Diploma (Polytechnic)</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">2. Select Branch</label>
+            <select id="notesBranch" onchange="filterNotes()" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs sm:text-sm text-slate-200 focus:border-emerald-500 focus:outline-none">
+              <option value="CSE">Computer Science & Engg (CSE)</option>
+              <option value="IT">Information Technology (IT)</option>
+              <option value="AIML">AI & Machine Learning</option>
+              <option value="ECE">Electronics & Communication (ECE)</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">3. Select Semester</label>
+            <select id="notesSem" onchange="filterNotes()" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs sm:text-sm text-slate-200 focus:border-emerald-500 focus:outline-none">
+              <option value="1">Semester 1</option>
+              <option value="2">Semester 2</option>
+              <option value="3" selected>Semester 3</option>
+              <option value="4">Semester 4</option>
+              <option value="5">Semester 5</option>
+              <option value="6">Semester 6</option>
+              <option value="7">Semester 7</option>
+              <option value="8">Semester 8</option>
+            </select>
+          </div>
+        </div>
       </div>
 
-      <div id="notesContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+      <div id="notesCardsList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"></div>
     </section>
 
-    <!-- SECTION 2: AI DOUBT SOLVER -->
+
+    <!-- ================= 2. AI DOUBT & PROBLEM SOLVER ================= -->
     <section id="section-doubt" class="hidden space-y-6">
       <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-5">
         <div>
-          <h2 class="text-xl font-bold text-white">B.Tech AI Doubt & Problem Solver</h2>
-          <p class="text-xs text-slate-400 mt-1">Ask questions, complex code debugs, algorithms, or derivation explanations</p>
+          <h2 class="text-xl font-bold text-white">B.Tech 24/7 AI Problem & Doubt Assistant</h2>
+          <p class="text-xs text-slate-400 mt-1">Get instant step-by-step solutions, code debugging, and concept clarity tailored to your syllabus.</p>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <input type="text" id="doubtSem" placeholder="Semester (e.g., Sem 4)" class="bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 focus:border-emerald-500 focus:outline-none" />
-          <input type="text" id="doubtSub" placeholder="Subject (e.g., Operating Systems / Algorithms)" class="bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 focus:border-emerald-500 focus:outline-none" />
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <input type="text" id="askCourse" placeholder="Course (e.g. B.Tech)" class="bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 focus:border-emerald-500 focus:outline-none" />
+          <input type="text" id="askBranch" placeholder="Branch (e.g. CSE / IT)" class="bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 focus:border-emerald-500 focus:outline-none" />
+          <input type="text" id="askSubject" placeholder="Subject (e.g. DBMS / OS / DSA)" class="bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 focus:border-emerald-500 focus:outline-none" />
         </div>
 
-        <textarea id="doubtQuery" rows="4" placeholder="Paste your question, error log, or concept here..." class="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-sm text-slate-200 focus:border-emerald-500 focus:outline-none resize-none"></textarea>
+        <textarea id="askQuery" rows="4" placeholder="Paste your question, coding bug, derivation or theoretical doubt here..." class="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-xs sm:text-sm text-slate-200 focus:border-emerald-500 focus:outline-none resize-none"></textarea>
 
-        <button onclick="askAIDoubt()" id="doubtBtn" class="w-full py-3.5 rounded-xl bg-emerald-500 text-slate-950 font-bold hover:bg-emerald-400 transition cursor-pointer">Solve with AI Assistant</button>
+        <button onclick="askDoubtAI()" id="doubtSubmitBtn" class="w-full py-3.5 rounded-xl bg-emerald-500 text-slate-950 font-bold hover:bg-emerald-400 transition cursor-pointer">
+          Solve with AI Assistant
+        </button>
       </div>
 
-      <div id="doubtOutput" class="hidden bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4">
-        <h3 class="text-sm font-bold text-emerald-400 uppercase">AI Explanation & Solution</h3>
+      <div id="doubtSolutionBox" class="hidden bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4">
+        <h3 class="text-sm font-bold text-emerald-400 uppercase tracking-wider">AI Solution & Step-by-Step Breakdown</h3>
         <div id="doubtSolutionText" class="text-sm text-slate-200 whitespace-pre-wrap leading-relaxed"></div>
       </div>
     </section>
 
-    <!-- SECTION 3: PYQ PAPERS -->
+
+    <!-- ================= 3. PREVIOUS YEAR PAPERS (PYQ) ================= -->
     <section id="section-pyq" class="hidden space-y-6">
-      <div>
-        <h2 class="text-xl font-bold text-white">Previous Year Question Papers (PYQs)</h2>
-        <p class="text-xs text-slate-400">Download and practice university mid-term and end-term exam question papers</p>
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h2 class="text-xl font-bold text-white">Previous Year Question Papers (PYQs)</h2>
+          <p class="text-xs text-slate-400">Download and solve past university exam question papers</p>
+        </div>
       </div>
-      <div id="pyqContainer" class="grid grid-cols-1 md:grid-cols-2 gap-5"></div>
+      <div id="pyqList" class="grid grid-cols-1 md:grid-cols-2 gap-5"></div>
     </section>
 
-    <!-- SECTION 4: MOCK TESTS -->
+
+    <!-- ================= 4. AI SUBJECT MOCK TESTS ================= -->
     <section id="section-mock" class="hidden space-y-6">
       <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-5">
         <div>
-          <h2 class="text-xl font-bold text-white">Interactive Subject Mock Test</h2>
-          <p class="text-xs text-slate-400 mt-1">Answer university standard questions and receive instant AI evaluation & grading</p>
+          <h2 class="text-xl font-bold text-white">Subject Mock Test & AI Evaluator</h2>
+          <p class="text-xs text-slate-400 mt-1">Pick your subject, generate university-level questions, and receive instant AI evaluation & grading.</p>
         </div>
 
         <div class="flex flex-col sm:flex-row gap-4">
-          <select id="mockSubject" class="bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-200 focus:border-emerald-500 focus:outline-none">
-            <option value="Data Structures & Algorithms">Data Structures & Algorithms</option>
-            <option value="Operating Systems">Operating Systems</option>
-            <option value="Database Management Systems">Database Management Systems</option>
-            <option value="Computer Networks">Computer Networks</option>
+          <select id="mockSubjectPick" class="bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-200 focus:border-emerald-500 focus:outline-none">
+            <option value="Data Structures & Algorithms">Data Structures & Algorithms (DSA)</option>
+            <option value="Operating Systems">Operating Systems (OS)</option>
+            <option value="Database Management Systems">Database Management Systems (DBMS)</option>
+            <option value="Computer Networks">Computer Networks (CN)</option>
+            <option value="Theory of Computation">Theory of Computation (TOC)</option>
           </select>
-          <button onclick="generateMockQuestion()" class="px-6 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-100 text-sm font-bold border border-slate-700">Generate Question</button>
+          <button onclick="generateMockQ()" class="px-6 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-100 text-sm font-bold border border-slate-700">Generate Question</button>
         </div>
 
-        <div id="mockQuestionCard" class="hidden bg-slate-950 p-5 rounded-2xl border border-slate-800 space-y-4">
-          <span class="text-xs font-bold text-emerald-400 uppercase tracking-wide">Target Question:</span>
-          <p id="activeQuestion" class="text-sm font-semibold text-white"></p>
-          <textarea id="mockUserAnswer" rows="4" placeholder="Write your complete technical answer here..." class="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-sm text-slate-200 focus:border-emerald-500 focus:outline-none"></textarea>
-          <button onclick="submitMockAnswer()" id="mockSubmitBtn" class="px-5 py-2.5 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs hover:bg-emerald-400">Evaluate Answer</button>
+        <div id="mockQuestionArea" class="hidden bg-slate-950 p-5 rounded-2xl border border-slate-800 space-y-4">
+          <span class="text-xs font-bold text-emerald-400 uppercase tracking-wide">University Standard Question:</span>
+          <p id="mockQuestionText" class="text-sm font-semibold text-white"></p>
+          <textarea id="mockUserAns" rows="4" placeholder="Write your complete technical answer here..." class="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs sm:text-sm text-slate-200 focus:border-emerald-500 focus:outline-none"></textarea>
+          <button onclick="submitMockGrading()" id="mockGradingBtn" class="px-5 py-2.5 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs hover:bg-emerald-400">Evaluate My Answer</button>
         </div>
 
-        <div id="mockResultCard" class="hidden p-5 rounded-2xl bg-slate-950 border border-slate-800 text-sm space-y-2"></div>
+        <div id="mockEvaluationResult" class="hidden p-5 rounded-2xl bg-slate-950 border border-slate-800 text-sm space-y-2"></div>
       </div>
     </section>
 
-    <!-- SECTION 5: ORIGINAL RESUME AI CAREER -->
+
+    <!-- ================= 5. JOB REQUIREMENTS & RESUME AI ================= -->
     <section id="section-career" class="hidden space-y-6">
-      <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl">
-        <h2 class="text-xl font-bold text-white mb-4">Resume Gap Analysis & Interview Prep</h2>
+      <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-5">
+        <div>
+          <h2 class="text-xl font-bold text-white">Job Requirements & Resume Gap Analysis</h2>
+          <p class="text-xs text-slate-400 mt-1">Upload your resume and match it against actual job descriptions for skill gaps, roadmaps & AI mock interviews.</p>
+        </div>
+
         <div class="space-y-4">
           <div>
             <label class="block text-xs font-semibold text-slate-300 mb-2">Upload Resume (PDF)</label>
-            <input type="file" id="resumeFile" accept=".pdf" class="w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-emerald-500 file:text-slate-950 bg-slate-950 p-2 rounded-xl border border-slate-800" />
+            <input type="file" id="resumeFile" accept=".pdf" class="w-full text-xs text-slate-400 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-emerald-500 file:text-slate-950 bg-slate-950 p-2 rounded-xl border border-slate-800" />
           </div>
+
           <div>
-            <label class="block text-xs font-semibold text-slate-300 mb-2">Target Job Description</label>
-            <textarea id="jobDescription" rows="2" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 focus:border-emerald-500 focus:outline-none resize-none">Looking for a Software Engineering Intern with skills in Python, DSA, Git, and Web Development.</textarea>
+            <label class="block text-xs font-semibold text-slate-300 mb-2">Target Job Requirements & Description</label>
+            <textarea id="jobDescription" rows="3" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs sm:text-sm text-slate-200 focus:border-emerald-500 focus:outline-none resize-none">Looking for a Software Development Engineer (SDE) Intern with proficiency in Python/Java, Data Structures, SQL/DBMS, and Git.</textarea>
           </div>
-          <button type="button" id="submitBtn" onclick="runAnalysis()" class="w-full py-3.5 rounded-xl font-bold bg-emerald-500 text-slate-950 hover:bg-emerald-400 transition text-sm">Analyze Resume</button>
+
+          <button type="button" id="careerAnalyzeBtn" onclick="runResumeAnalysis()" class="w-full py-3.5 rounded-xl font-bold bg-emerald-500 text-slate-950 hover:bg-emerald-400 transition text-sm">
+            Analyze Resume Match with AI
+          </button>
         </div>
       </div>
 
-      <div id="results" class="hidden space-y-6">
-        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 flex justify-between items-center">
+      <!-- Resume Results -->
+      <div id="careerResults" class="hidden space-y-6">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 flex flex-col sm:flex-row justify-between items-center gap-4">
           <div>
             <span class="text-xs uppercase font-bold text-slate-400">Match Accuracy</span>
-            <h3 class="text-xl font-bold text-white" id="resultFilename">Profile</h3>
+            <h3 class="text-xl font-bold text-white" id="careerFilename">Resume Profile</h3>
           </div>
-          <div class="text-4xl font-black text-emerald-400" id="matchScore">--%</div>
+          <div class="text-4xl font-black text-emerald-400" id="careerMatchScore">--%</div>
         </div>
+
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
             <h4 class="text-xs font-bold text-emerald-400 uppercase mb-3">Detected Skills</h4>
-            <div id="detectedSkills" class="flex flex-wrap gap-2"></div>
+            <div id="careerDetectedSkills" class="flex flex-wrap gap-2"></div>
           </div>
           <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
             <h4 class="text-xs font-bold text-rose-400 uppercase mb-3">Missing Skills</h4>
-            <div id="missingSkills" class="flex flex-wrap gap-2"></div>
+            <div id="careerMissingSkills" class="flex flex-wrap gap-2"></div>
           </div>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4">
+          <h4 class="text-base font-bold text-emerald-400">2-Week Fast-Track Learning Roadmap</h4>
+          <div id="careerRoadmap" class="space-y-2 text-sm text-slate-300"></div>
         </div>
       </div>
     </section>
@@ -203,151 +340,205 @@ HTML_PAGE = """<!DOCTYPE html>
   </div>
 
   <script>
-    var semNotes = {
-      1: [
-        { name: "Engineering Mathematics I", topics: "Calculus, Matrices, Differential Equations", url: "#" },
-        { name: "Engineering Physics", topics: "Optics, Quantum Mechanics, Laser & Fiber Optics", url: "#" },
-        { name: "Basic Electrical Engg.", topics: "AC/DC Circuits, Transformers, Motors", url: "#" }
-      ],
-      2: [
-        { name: "Programming in C", topics: "Pointers, Memory Allocation, Structures, File IO", url: "#" },
-        { name: "Engineering Mathematics II", topics: "Fourier Series, Vector Calculus, Complex Numbers", url: "#" },
-        { name: "Basic Electronics", topics: "Diodes, Transistors, Op-Amps, Logic Gates", url: "#" }
-      ],
-      3: [
-        { name: "Data Structures & Algorithms", topics: "Arrays, Linked Lists, Trees, Graphs, Sorting", url: "#" },
-        { name: "Digital Logic Design", topics: "K-Maps, Combinational & Sequential Circuits, Flip-Flops", url: "#" },
-        { name: "Discrete Mathematics", topics: "Set Theory, Graph Theory, Combinatorics, Recurrences", url: "#" }
-      ],
-      4: [
-        { name: "Operating Systems", topics: "Process Scheduling, Deadlocks, Virtual Memory, Linux CLI", url: "#" },
-        { name: "Database Management (DBMS)", topics: "SQL Queries, Normalization (1NF-BCNF), Indexing, ACID", url: "#" },
-        { name: "Computer Organization (COA)", topics: "Pipelining, Memory Hierarchy, ALU Design, Cache", url: "#" }
-      ],
-      5: [
-        { name: "Design & Analysis of Algorithms", topics: "Divide & Conquer, Dynamic Programming, Greedy, NP-Hard", url: "#" },
-        { name: "Computer Networks", topics: "OSI & TCP/IP Models, Routing Protocols, Sockets, Subnetting", url: "#" },
-        { name: "Software Engineering", topics: "Agile, SDLC, Design Patterns, CI/CD Pipelines", url: "#" }
-      ],
-      6: [
-        { name: "Compiler Design", topics: "Lexical Analysis, Parsing (LL/LR), Code Optimization", url: "#" },
-        { name: "Artificial Intelligence & ML", topics: "Search Algos, Supervised/Unsupervised Learning, Neural Nets", url: "#" },
-        { name: "Cloud Computing", topics: "AWS Basics, Microservices, Docker & Kubernetes", url: "#" }
-      ],
-      7: [
-        { name: "Cybersecurity & Cryptography", topics: "RSA, AES, Network Security, Vulnerability Testing", url: "#" },
-        { name: "Distributed Systems", topics: "Consensus (Raft/Paxos), RPC, Message Queues, Scalability", url: "#" },
-        { name: "Big Data Analytics", topics: "Hadoop, Spark, MapReduce, NoSQL Architectures", url: "#" }
-      ],
-      8: [
-        { name: "Major Project Documentation", topics: "SRS, High-Level Architecture, Viva Prep, Testing Reports", url: "#" },
-        { name: "Industry Internship Electives", topics: "DevOps Practices, System Design, Production Readiness", url: "#" }
-      ]
-    };
+    // --- 1. USER PROFILE / ONBOARDING LOGIC ---
+    function checkExistingProfile() {
+      var savedProfile = localStorage.getItem('internwise_user');
+      if (savedProfile) {
+        var user = JSON.parse(savedProfile);
+        document.getElementById('greetingName').textContent = user.name;
+        document.getElementById('greetingStatus').textContent = user.status;
+        document.getElementById('onboardingScreen').classList.add('hidden');
+        document.getElementById('mainDashboard').classList.remove('hidden');
+        filterNotes();
+        loadPyqList();
+      }
+    }
 
-    var pyqPapers = [
-      { subject: "Data Structures & Algorithms", sem: "Semester 3", year: "2024 - End Term", marks: "100 Marks" },
-      { subject: "Operating Systems", sem: "Semester 4", year: "2024 - Mid Term", marks: "50 Marks" },
-      { subject: "Database Management Systems", sem: "Semester 4", year: "2023 - End Term", marks: "100 Marks" },
-      { subject: "Computer Networks", sem: "Semester 5", year: "2024 - End Term", marks: "100 Marks" }
-    ];
+    function handleOnboarding(e) {
+      e.preventDefault();
+      var user = {
+        name: document.getElementById('userName').value,
+        email: document.getElementById('userEmail').value,
+        phone: document.getElementById('userPhone').value,
+        gender: document.getElementById('userGender').value,
+        age: document.getElementById('userAge').value,
+        status: document.getElementById('userStatus').value
+      };
+      localStorage.setItem('internwise_user', JSON.stringify(user));
+      checkExistingProfile();
+    }
 
+    function logoutProfile() {
+      if (confirm('Switch student profile?')) {
+        localStorage.removeItem('internwise_user');
+        location.reload();
+      }
+    }
+
+    // --- 2. TABS SWITCHER ---
     function switchTab(tabName) {
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
       document.getElementById('tab-' + tabName).classList.add('active');
-      
-      ['notes', 'doubt', 'pyq', 'mock', 'career'].forEach(sec => {
-        document.getElementById('section-' + sec).classList.add('hidden');
+      ['notes', 'doubt', 'pyq', 'mock', 'career'].forEach(s => {
+        document.getElementById('section-' + s).classList.add('hidden');
       });
       document.getElementById('section-' + tabName).classList.remove('hidden');
     }
 
-    function loadSemData() {
-      var sem = document.getElementById('semSelect').value;
-      var data = semNotes[sem] || [];
-      var container = document.getElementById('notesContainer');
-      var html = '';
+    // --- 3. NOTES REPOSITORY ---
+    var academicDatabase = {
+      "B.Tech": {
+        "1": [
+          { name: "Engineering Mathematics I", topics: "Linear Algebra, Calculus, Differential Equations", file: "Maths1_Notes.pdf" },
+          { name: "Engineering Physics", topics: "Optics, Lasers, Quantum Theory, Fiber Optics", file: "Physics_Notes.pdf" },
+          { name: "Basic Electrical Engineering", topics: "AC Circuits, DC Network Theorems, Transformers", file: "BEE_Notes.pdf" }
+        ],
+        "2": [
+          { name: "Programming in C", topics: "Pointers, DMA, Structures, Recursion, File Handling", file: "C_Programming.pdf" },
+          { name: "Engineering Mathematics II", topics: "Fourier Series, Vector Calculus, Complex Variables", file: "Maths2_Notes.pdf" },
+          { name: "Basic Electronics", topics: "Semiconductors, Diodes, BJT, Op-Amps", file: "Electronics.pdf" }
+        ],
+        "3": [
+          { name: "Data Structures & Algorithms", topics: "Arrays, Linked Lists, Trees, Graphs, Sorting & Searching", file: "DSA_Notes.pdf" },
+          { name: "Digital Logic & Design (DLD)", topics: "Number Systems, K-Maps, Combinational & Sequential Circuits", file: "DLD_Notes.pdf" },
+          { name: "Discrete Mathematical Structures", topics: "Set Theory, Relations, Group Theory, Recurrences", file: "DiscreteMath.pdf" }
+        ],
+        "4": [
+          { name: "Operating Systems (OS)", topics: "Processes, CPU Scheduling, Deadlocks, Memory Management, Linux", file: "OS_Complete.pdf" },
+          { name: "Database Management Systems (DBMS)", topics: "ER Model, Relational Algebra, SQL Queries, Normalization, ACID", file: "DBMS_Notes.pdf" },
+          { name: "Computer Organization & Arch (COA)", topics: "Pipelining, Instruction Formats, Memory Hierarchy, Cache", file: "COA_Notes.pdf" }
+        ],
+        "5": [
+          { name: "Design & Analysis of Algorithms (DAA)", topics: "Divide & Conquer, Dynamic Programming, Greedy, NP Completeness", file: "DAA_Notes.pdf" },
+          { name: "Computer Networks (CN)", topics: "OSI vs TCP/IP, IP Addressing, Subnetting, Routing Protocols", file: "CN_Notes.pdf" },
+          { name: "Software Engineering", topics: "Agile Model, SDLC, SRS Documentation, Testing Techniques", file: "SoftwareEngg.pdf" }
+        ],
+        "6": [
+          { name: "Compiler Design", topics: "Lexical Analysis, Top-Down/Bottom-Up Parsing, Code Generation", file: "Compiler_Notes.pdf" },
+          { name: "Artificial Intelligence & ML", topics: "State Space Search, Heuristics, Supervised/Unsupervised ML", file: "AIML_Notes.pdf" },
+          { name: "Cloud Computing & DevOps", topics: "Virtualization, AWS Basics, Docker, Kubernetes, CI/CD", file: "Cloud_DevOps.pdf" }
+        ],
+        "7": [
+          { name: "Cybersecurity & Cryptography", topics: "Symmetric/Asymmetric Encryption, RSA, Hashing, Network Attacks", file: "Cybersec.pdf" },
+          { name: "Distributed Systems", topics: "RPC, MapReduce, Consensus Algorithms, Microservices", file: "DistributedSys.pdf" }
+        ],
+        "8": [
+          { name: "Major Project & Viva Preparation", topics: "SRS, Architecture Diagrams, Testing Reports, Code Review", file: "MajorProject_Guide.pdf" },
+          { name: "System Design & Industry Elective", topics: "High-Level Design (HLD), Low-Level Design (LLD), Scalability", file: "SystemDesign.pdf" }
+        ]
+      }
+    };
 
-      data.forEach(function(item) {
+    function filterNotes() {
+      var course = document.getElementById('notesCourse').value;
+      var branch = document.getElementById('notesBranch').value;
+      var sem = document.getElementById('notesSem').value;
+      var container = document.getElementById('notesCardsList');
+
+      var courseData = academicDatabase[course] || academicDatabase["B.Tech"];
+      var list = courseData[sem] || courseData["3"] || [];
+
+      var html = '';
+      list.forEach(function(item) {
         html += '<div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 flex flex-col justify-between space-y-4 hover:border-emerald-500/40 transition">' +
           '<div>' +
-            '<span class="text-xs font-bold text-emerald-400 uppercase tracking-wider">Semester ' + sem + '</span>' +
-            '<h3 class="text-base font-bold text-white mt-1">' + item.name + '</h3>' +
-            '<p class="text-xs text-slate-400 mt-2 leading-relaxed"><strong>Key Topics:</strong> ' + item.topics + '</p>' +
+            '<div class="flex items-center justify-between">' +
+              '<span class="text-xs font-bold text-emerald-400 uppercase tracking-wider">' + course + ' ' + branch + ' • Sem ' + sem + '</span>' +
+              '<span class="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-300">Verified</span>' +
+            '</div>' +
+            '<h3 class="text-base font-bold text-white mt-2">' + item.name + '</h3>' +
+            '<p class="text-xs text-slate-400 mt-2 leading-relaxed"><strong>Core Syllabus:</strong> ' + item.topics + '</p>' +
           '</div>' +
-          '<button onclick="alert(\'Downloading Revision Notes for ' + item.name + '...\')" class="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 border border-slate-700">Download Notes (PDF)</button>' +
+          '<button onclick="alert(\'Downloading verified study notes for ' + item.name + '...\')" class="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 border border-slate-700 flex items-center justify-center gap-2">' +
+            '<span>Download Notes (PDF)</span>' +
+          '</button>' +
         '</div>';
       });
       container.innerHTML = html;
     }
 
-    function loadPyqs() {
-      var container = document.getElementById('pyqContainer');
+    // --- 4. PYQ LIST ---
+    var pyqData = [
+      { subject: "Data Structures & Algorithms", sem: "Semester 3", year: "2024 End-Term", marks: "100 Marks" },
+      { subject: "Operating Systems", sem: "Semester 4", year: "2024 Mid-Term", marks: "50 Marks" },
+      { subject: "Database Management Systems", sem: "Semester 4", year: "2023 End-Term", marks: "100 Marks" },
+      { subject: "Computer Networks", sem: "Semester 5", year: "2024 End-Term", marks: "100 Marks" },
+      { subject: "Design & Analysis of Algorithms", sem: "Semester 5", year: "2023 End-Term", marks: "100 Marks" }
+    ];
+
+    function loadPyqList() {
+      var container = document.getElementById('pyqList');
       var html = '';
-      pyqPapers.forEach(function(p) {
+      pyqData.forEach(function(p) {
         html += '<div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 flex items-center justify-between hover:border-emerald-500/40 transition">' +
           '<div>' +
             '<span class="text-xs font-bold text-emerald-400 uppercase">' + p.sem + '</span>' +
             '<h4 class="text-base font-bold text-white mt-0.5">' + p.subject + '</h4>' +
             '<p class="text-xs text-slate-400 mt-1">' + p.year + ' • ' + p.marks + '</p>' +
           '</div>' +
-          '<button onclick="alert(\'Downloading ' + p.subject + ' PYQ Paper...\')" class="px-4 py-2 text-xs font-bold rounded-xl bg-emerald-500 text-slate-950 hover:bg-emerald-400">Download</button>' +
+          '<button onclick="alert(\'Downloading ' + p.subject + ' ' + p.year + ' Paper...\')" class="px-4 py-2 text-xs font-bold rounded-xl bg-emerald-500 text-slate-950 hover:bg-emerald-400">Download Paper</button>' +
         '</div>';
       });
       container.innerHTML = html;
     }
 
-    async function askAIDoubt() {
-      var query = document.getElementById('doubtQuery').value;
-      var sem = document.getElementById('doubtSem').value || 'B.Tech CSE';
-      var sub = document.getElementById('doubtSub').value || 'Computer Science';
-      var btn = document.getElementById('doubtBtn');
+    // --- 5. AI DOUBT SOLVER ---
+    async function askDoubtAI() {
+      var query = document.getElementById('askQuery').value;
+      var course = document.getElementById('askCourse').value || 'B.Tech';
+      var branch = document.getElementById('askBranch').value || 'CSE';
+      var subject = document.getElementById('askSubject').value || 'Computer Science';
+      var btn = document.getElementById('doubtSubmitBtn');
 
-      if (!query.trim()) { alert('Pehle apna doubt ya question type karein.'); return; }
+      if (!query.trim()) { alert('Pehle apna doubt ya problem statement enter karein.'); return; }
+
       btn.disabled = true;
-      btn.innerText = 'AI Assistant is solving...';
+      btn.innerText = 'AI Assistant is solving... Please wait...';
 
       try {
         var res = await fetch('/api/btech-doubt-solver', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query: query, semester: sem, subject: sub })
+          body: JSON.stringify({ query: query, course: course, branch: branch, semester: 'All', subject: subject })
         });
         var data = await res.json();
         document.getElementById('doubtSolutionText').textContent = data.solution;
-        document.getElementById('doubtOutput').classList.remove('hidden');
-      } catch (err) {
-        alert('Error solving doubt: ' + err.message);
+        document.getElementById('doubtSolutionBox').classList.remove('hidden');
+        document.getElementById('doubtSolutionBox').scrollIntoView({ behavior: 'smooth' });
+      } catch (e) {
+        alert('Doubt Solver Error: ' + e.message);
       } finally {
         btn.disabled = false;
         btn.innerText = 'Solve with AI Assistant';
       }
     }
 
-    var sampleBank = {
-      "Data Structures & Algorithms": "Explain the time complexity of QuickSort in Worst, Best and Average cases with the partition logic.",
-      "Operating Systems": "What is Deadlock? List the four necessary Coffman conditions and explain Banker's Algorithm.",
-      "Database Management Systems": "Explain the difference between 3NF and BCNF with a relational schema example.",
-      "Computer Networks": "Explain the 3-Way Handshake mechanism in TCP connection establishment."
+    // --- 6. MOCK TESTS ---
+    var mockBank = {
+      "Data Structures & Algorithms": "Explain the time complexity of QuickSort in Worst, Best and Average cases along with partition logic.",
+      "Operating Systems": "What is Deadlock? List the four necessary Coffman conditions and explain how Banker's Algorithm prevents it.",
+      "Database Management Systems": "Explain the differences between 3NF and BCNF with a suitable schema decomposition example.",
+      "Computer Networks": "Explain the 3-Way Handshake mechanism in TCP and describe how SYN Flood attacks occur.",
+      "Theory of Computation": "Explain the differences between DFA and NFA, and prove that every NFA can be converted to an equivalent DFA."
     };
 
-    function generateMockQuestion() {
-      var sub = document.getElementById('mockSubject').value;
-      document.getElementById('activeQuestion').textContent = sampleBank[sub] || 'Explain key architecture concepts in ' + sub;
-      document.getElementById('mockQuestionCard').classList.remove('hidden');
-      document.getElementById('mockResultCard').classList.add('hidden');
-      document.getElementById('mockUserAnswer').value = '';
+    function generateMockQ() {
+      var sub = document.getElementById('mockSubjectPick').value;
+      document.getElementById('mockQuestionText').textContent = mockBank[sub] || 'Explain core principles and algorithms in ' + sub;
+      document.getElementById('mockQuestionArea').classList.remove('hidden');
+      document.getElementById('mockEvaluationResult').classList.add('hidden');
+      document.getElementById('mockUserAns').value = '';
     }
 
-    async function submitMockAnswer() {
-      var sub = document.getElementById('mockSubject').value;
-      var q = document.getElementById('activeQuestion').textContent;
-      var ans = document.getElementById('mockUserAnswer').value;
-      var btn = document.getElementById('mockSubmitBtn');
+    async function submitMockGrading() {
+      var sub = document.getElementById('mockSubjectPick').value;
+      var q = document.getElementById('mockQuestionText').textContent;
+      var ans = document.getElementById('mockUserAns').value;
+      var btn = document.getElementById('mockGradingBtn');
 
-      if (!ans.trim()) { alert('Pehle apna answer type karein.'); return; }
+      if (!ans.trim()) { alert('Kripya pehle apna answer likhein.'); return; }
       btn.disabled = true;
-      btn.innerText = 'AI Grading...';
+      btn.innerText = 'Grading with AI...';
 
       try {
         var res = await fetch('/api/evaluate-mock-test', {
@@ -356,27 +547,28 @@ HTML_PAGE = """<!DOCTYPE html>
           body: JSON.stringify({ subject: sub, question: q, user_answer: ans })
         });
         var data = await res.json();
-        var out = document.getElementById('mockResultCard');
-        out.innerHTML = '<div class="flex justify-between items-center"><span class="font-bold text-white">Score: <strong class="text-emerald-400">' + data.score + '/10</strong></span></div>' +
-          '<p class="text-slate-300"><strong>Feedback:</strong> ' + data.feedback + '</p>' +
-          '<p class="text-xs text-slate-400"><strong>Key Points Needed:</strong> ' + data.ideal_points + '</p>';
+        var out = document.getElementById('mockEvaluationResult');
+        out.innerHTML = '<div class="flex justify-between items-center"><span class="font-bold text-white">Score: <strong class="text-emerald-400 text-lg">' + data.score + '/10</strong></span></div>' +
+          '<p class="text-slate-300"><strong>AI Feedback:</strong> ' + data.feedback + '</p>' +
+          '<p class="text-xs text-slate-400 border-t border-slate-800 pt-2"><strong class="text-emerald-400">Key Points for 10/10:</strong> ' + data.ideal_points + '</p>';
         out.classList.remove('hidden');
-      } catch (e) {
-        alert('Grading error: ' + e.message);
+      } catch (err) {
+        alert('Grading error: ' + err.message);
       } finally {
         btn.disabled = false;
-        btn.innerText = 'Evaluate Answer';
+        btn.innerText = 'Evaluate My Answer';
       }
     }
 
-    async function runAnalysis() {
+    // --- 7. RESUME / CAREER AI ---
+    async function runResumeAnalysis() {
       var fileInput = document.getElementById('resumeFile');
       var jobDesc = document.getElementById('jobDescription');
-      var submitBtn = document.getElementById('submitBtn');
+      var btn = document.getElementById('careerAnalyzeBtn');
 
-      if (!fileInput.files || fileInput.files.length === 0) { alert('PDF select karein.'); return; }
-      submitBtn.disabled = true;
-      submitBtn.innerText = 'Analyzing...';
+      if (!fileInput.files || fileInput.files.length === 0) { alert('PDF Resume select karein.'); return; }
+      btn.disabled = true;
+      btn.innerText = 'Analyzing Resume with Gemini AI...';
 
       var formData = new FormData();
       formData.append('file', fileInput.files[0]);
@@ -386,29 +578,36 @@ HTML_PAGE = """<!DOCTYPE html>
         var res = await fetch('/api/analyze-resume', { method: 'POST', body: formData });
         var data = await res.json();
         var analysis = data.ai_analysis;
-        document.getElementById('resultFilename').textContent = data.filename;
-        document.getElementById('matchScore').textContent = (analysis.match_percentage || 0) + '%';
-        
+
+        document.getElementById('careerFilename').textContent = data.filename;
+        document.getElementById('careerMatchScore').textContent = (analysis.match_percentage || 0) + '%';
+
         var dHtml = '';
         (analysis.candidate_skills || []).forEach(s => dHtml += '<span class="px-3 py-1 text-xs rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">' + s + '</span>');
-        document.getElementById('detectedSkills').innerHTML = dHtml;
+        document.getElementById('careerDetectedSkills').innerHTML = dHtml || '<span class="text-xs text-slate-500">None detected</span>';
 
         var mHtml = '';
         (analysis.missing_skills || []).forEach(s => mHtml += '<span class="px-3 py-1 text-xs rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/20">' + s + '</span>');
-        document.getElementById('missingSkills').innerHTML = mHtml;
+        document.getElementById('careerMissingSkills').innerHTML = mHtml || '<span class="text-xs text-emerald-400">No missing skills!</span>';
 
-        document.getElementById('results').classList.remove('hidden');
+        var rHtml = '';
+        (analysis.learning_roadmap || []).forEach((step, i) => {
+          rHtml += '<div class="flex items-start gap-2"><strong class="text-emerald-400">Step ' + (i+1) + ':</strong> <span>' + step + '</span></div>';
+        });
+        document.getElementById('careerRoadmap').innerHTML = rHtml;
+
+        document.getElementById('careerResults').classList.remove('hidden');
+        document.getElementById('careerResults').scrollIntoView({ behavior: 'smooth' });
       } catch (err) {
-        alert('Error: ' + err.message);
+        alert('Resume Error: ' + err.message);
       } finally {
-        submitBtn.disabled = false;
-        submitBtn.innerText = 'Analyze Resume';
+        btn.disabled = false;
+        btn.innerText = 'Analyze Resume Match with AI';
       }
     }
 
-    // Init
-    loadSemData();
-    loadPyqs();
+    // Startup check
+    checkExistingProfile();
   </script>
 </body>
 </html>"""
@@ -420,16 +619,18 @@ def serve_home():
 @app.post("/api/btech-doubt-solver")
 async def btech_doubt_solver(req: DoubtRequest):
     if not client:
-        raise HTTPException(status_code=500, detail="Gemini API Key Missing")
-    
+        raise HTTPException(status_code=500, detail="Gemini API Key Missing in backend")
+
     prompt = f"""
-    You are an expert Computer Science Professor and B.Tech Mentor.
+    You are an elite Computer Science Professor and B.Tech Academic Mentor.
+    Course: {req.course}
+    Branch: {req.branch}
     Subject: {req.subject}
-    Semester: {req.semester}
-    Student Question / Problem:
+
+    Student Query / Problem:
     {req.query}
 
-    Provide an accurate, step-by-step, clean educational explanation with code/diagram references where applicable.
+    Provide a crystal-clear, step-by-step educational solution with code, diagrams/flow representation, and key points for university exams.
     """
     response = client.models.generate_content(
         model="gemini-2.5-flash",
@@ -445,14 +646,14 @@ async def evaluate_mock_test(req: TestEvalRequest):
     prompt = f"""
     Subject: {req.subject}
     Question: {req.question}
-    Student Answer: {req.user_answer}
+    Candidate Answer: {req.user_answer}
 
-    Grade this answer out of 10 for a B.Tech university standard.
-    Return ONLY a JSON object:
+    Grade this answer out of 10 for university standard.
+    Return ONLY a valid JSON object:
     {{
         "score": 8,
-        "feedback": "2 sentences of objective feedback on accuracy and terminology",
-        "ideal_points": "Key definitions, formulas or diagrams required for full marks"
+        "feedback": "2 concise sentences on technical accuracy and missing concepts",
+        "ideal_points": "Key definitions, logic or diagrams required for full marks"
     }}
     """
     response = client.models.generate_content(
@@ -466,20 +667,24 @@ async def evaluate_mock_test(req: TestEvalRequest):
 async def analyze_resume(file: UploadFile = File(...), job_description: str = Form(...)):
     if not client:
         raise HTTPException(status_code=500, detail="Gemini API Key Missing")
-    
+
     pdf_bytes = await file.read()
     reader = PdfReader(io.BytesIO(pdf_bytes))
     extracted_text = " ".join([page.extract_text() or "" for page in reader.pages]).strip()
 
     prompt = f"""
-    Resume: {extracted_text}
+    Resume Content: {extracted_text}
     Job Description: {job_description}
 
-    Return ONLY a JSON object:
+    Evaluate match strictly and return ONLY a valid JSON object:
     {{
-        "candidate_skills": ["skill1", "skill2"],
-        "missing_skills": ["missing1", "missing2"],
-        "match_percentage": 80
+        "candidate_skills": ["detected skills"],
+        "missing_skills": ["missing skills"],
+        "match_percentage": 78,
+        "learning_roadmap": [
+            "Week 1: Foundations",
+            "Week 2: Advanced projects"
+        ]
     }}
     """
     response = client.models.generate_content(
