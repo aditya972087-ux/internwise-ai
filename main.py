@@ -574,7 +574,7 @@ async def btech_doubt_solver(req: DoubtRequest):
         Provide a crystal-clear, step-by-step educational solution with code and exam points.
         """
         response = client.models.generate_content(
-            model="gemini-2.5-flash",
+            model="gemini-3.6-flash",
             contents=prompt
         )
         return {"solution": response.text}
