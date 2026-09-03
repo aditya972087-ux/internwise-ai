@@ -1,991 +1,252 @@
-import io
-import os
-import json
-from fastapi import FastAPI, UploadFile, File, Form
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
-from pydantic import BaseModel
-from pypdf import PdfReader
+import io, json, os, re, uuid
+from datetime import datetime
+from pathlib import Path
+from typing import Optional
+
 from dotenv import load_dotenv
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Header
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
+from pydantic import BaseModel, Field
+from pypdf import PdfReader
+from sqlalchemy import create_engine, String, Text, Integer, DateTime, Boolean, select
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, Session
 
 load_dotenv()
+BASE = Path(__file__).resolve().parent
+DATA = BASE / "data"
+PDF_DIR = DATA / "pdfs"
+PDF_DIR.mkdir(parents=True, exist_ok=True)
+DB_PATH = DATA / "internwise.db"
+engine = create_engine(f"sqlite:///{DB_PATH}", connect_args={"check_same_thread": False})
 
-app = FastAPI(title="InternWise Portal", version="11.0.0")
+class Base(DeclarativeBase): pass
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+class Resource(Base):
+    __tablename__ = "resources"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    title: Mapped[str] = mapped_column(String(200))
+    semester: Mapped[int] = mapped_column(Integer)
+    branch: Mapped[str] = mapped_column(String(80), default="CSE")
+    subject: Mapped[str] = mapped_column(String(150))
+    resource_type: Mapped[str] = mapped_column(String(20))  # notes/pyq
+    year: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    description: Mapped[str] = mapped_column(Text, default="")
+    file_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    content: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    is_demo: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
-# Safe Gemini Client Init
+class Bookmark(Base):
+    __tablename__ = "bookmarks"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user: Mapped[str] = mapped_column(String(150))
+    resource_id: Mapped[int] = mapped_column(Integer)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+Base.metadata.create_all(engine)
+
+SUBJECTS = {
+1:["Engineering Mathematics I","Engineering Physics","Programming for Problem Solving","Basic Electrical Engineering","Engineering Graphics"],
+2:["Engineering Mathematics II","Engineering Chemistry","Data Structures","Digital Logic Design","Communication Skills"],
+3:["Discrete Mathematics","Object Oriented Programming","Database Management Systems","Computer Organization","Operating Systems"],
+4:["Design and Analysis of Algorithms","Computer Networks","Software Engineering","Theory of Computation","Web Technologies"],
+5:["Compiler Design","Artificial Intelligence","Machine Learning","Cloud Computing","Professional Elective I"],
+6:["Data Mining","Cyber Security","Distributed Systems","Mobile Application Development","Professional Elective II"],
+7:["Deep Learning","Natural Language Processing","DevOps","Big Data Analytics","Professional Elective III"],
+8:["Project","Internship/Industrial Training","Professional Elective IV","Seminar","Entrepreneurship"]
+}
+
+NOTE_TEMPLATE = """# {subject} — Semester {semester}\n\n## Quick Revision\n{subject} is an important B.Tech topic. This study pack gives a practical revision structure.\n\n## Unit-wise plan\n1. **Unit 1:** Fundamentals, definitions, terminology, important formulas/concepts.\n2. **Unit 2:** Core techniques, algorithms/processes, worked examples.\n3. **Unit 3:** Advanced concepts, comparisons and common exam questions.\n4. **Unit 4:** Applications, advantages, limitations and case studies.\n5. **Unit 5:** Revision, previous-question patterns and interview links.\n\n## Exam Focus\n- Learn definitions with one example.\n- Practice diagrams/algorithms wherever applicable.\n- Prepare 5-mark and 10-mark answers separately.\n- Solve at least two timed practice sets.\n\n## Viva / Interview\n- What problem does {subject} solve?\n- Explain its main concepts in simple language.\n- Give one real-world application.\n- Compare two related approaches.\n\n## Disclaimer\nThis is a demo revision pack. For university-specific notes, upload your verified PDF or configure the AI key to generate a subject-specific pack."""
+
+app = FastAPI(title="InternWise Portal", version="12.0.0")
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=False, allow_methods=["*"], allow_headers=["*"])
+
+GEMINI_KEY = os.getenv("GEMINI_API_KEY")
+ADMIN_KEY = os.getenv("ADMIN_KEY", "change-me")
 client = None
-try:
-    from google import genai
-    from google.genai import types
-    api_key = os.getenv("GEMINI_API_KEY", "").strip()
-    if api_key:
-        client = genai.Client(api_key=api_key)
-except Exception:
-    client = None
+if GEMINI_KEY:
+    try:
+        from google import genai
+        client = genai.Client(api_key=GEMINI_KEY)
+    except Exception:
+        client = None
 
 class DoubtRequest(BaseModel):
-    query: str
-    course: str
-    branch: str
-    semester: str
-    subject: str
+    question: str = Field(min_length=2, max_length=8000)
+    subject: str = "General B.Tech"
+    semester: int = 1
 
 class NotesGenRequest(BaseModel):
+    semester: int
     subject: str
-    course: str
-    branch: str
-    semester: str
-    topics: str
+    units: int = Field(default=5, ge=1, le=8)
+
+class Question(BaseModel):
+    question: str
+    marks: int = Field(default=2, ge=1, le=20)
+    answer: Optional[str] = None
 
 class TestEvalRequest(BaseModel):
     subject: str
-    question: str
-    user_answer: str
+    semester: int
+    questions: list[Question]
+
+class BookmarkRequest(BaseModel):
+    user: str
+    resource_id: int
+
+class ResumeTextRequest(BaseModel):
+    text: str = Field(min_length=20, max_length=50000)
+
+
+def ai_text(prompt: str) -> Optional[str]:
+    if not client: return None
+    try:
+        r = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
+        return getattr(r, "text", None)
+    except Exception:
+        return None
+
+def extract_json(text: str):
+    text = text.strip().replace("```json", "").replace("```", "")
+    m = re.search(r"\{.*\}", text, re.S)
+    if not m: raise ValueError("No JSON")
+    return json.loads(m.group(0))
+
+def seed():
+    with Session(engine) as s:
+        if s.scalar(select(Resource.id).limit(1)):
+            return
+        for sem, subs in SUBJECTS.items():
+            for sub in subs:
+                s.add(Resource(title=f"{sub} — AI Revision Notes", semester=sem, subject=sub,
+                    resource_type="notes", description="Demo revision notes; generate a fresh AI pack from the Notes tab.",
+                    content=NOTE_TEMPLATE.format(subject=sub, semester=sem), is_demo=True))
+                s.add(Resource(title=f"{sub} — Practice PYQ Set", semester=sem, subject=sub,
+                    resource_type="pyq", year=2025, description="Demo practice questions. Replace with your university's verified PYQ PDFs.",
+                    content=f"Practice PYQ Set — {sub}\n\n1. Define the core concepts of {sub}. (2 marks)\n2. Explain an important process/algorithm with diagram. (5 marks)\n3. Compare two major approaches in {sub}. (5 marks)\n4. Solve a representative problem and show steps. (10 marks)\n5. Discuss applications, advantages and limitations. (10 marks)", is_demo=True))
+        s.commit()
+seed()
 
-# ================= LOGIN PAGE =================
-LOGIN_HTML = """<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>InternWise - Student Registration</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <style> body { font-family: 'Plus Jakarta Sans', sans-serif; } </style>
-</head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex items-center justify-center p-4">
-  <div class="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6">
-    <div class="text-center space-y-2">
-      <div class="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-500/30 text-slate-950 font-black text-2xl">
-        IW
-      </div>
-      <h1 class="text-2xl sm:text-3xl font-black tracking-tight">Intern<span class="text-emerald-400">Wise</span></h1>
-      <p class="text-xs text-slate-400">Deep Academic & Career Engineering Suite</p>
-    </div>
-
-    <div class="border-t border-slate-800 pt-4">
-      <h2 class="text-base font-bold text-white mb-1">Create Student Profile</h2>
-      <p class="text-xs text-slate-400">Personalize comprehensive study notes, mock tests & career AI.</p>
-    </div>
-
-    <form action="/dashboard" method="GET" class="space-y-4">
-      <div>
-        <label class="block text-xs font-semibold text-slate-300 mb-1">Full Name</label>
-        <input type="text" name="name" required value="Aditya Kumar" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs sm:text-sm text-white focus:border-emerald-500 focus:outline-none" />
-      </div>
-
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div>
-          <label class="block text-xs font-semibold text-slate-300 mb-1">Email</label>
-          <input type="email" name="email" required value="aditya972087@gmail.com" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs sm:text-sm text-white focus:border-emerald-500 focus:outline-none" />
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-300 mb-1">Mobile Number</label>
-          <input type="text" name="phone" required value="9389033360" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs sm:text-sm text-white focus:border-emerald-500 focus:outline-none" />
-        </div>
-      </div>
-
-      <div>
-        <label class="block text-xs font-semibold text-slate-300 mb-1">Academic Degree / Course</label>
-        <select name="status" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs sm:text-sm text-emerald-400 font-semibold focus:border-emerald-500 focus:outline-none">
-          <option value="Currently Pursuing B.Tech / BE" selected>Currently Pursuing B.Tech / BE</option>
-          <option value="Currently Pursuing BCA / MCA">Currently Pursuing BCA / MCA</option>
-          <option value="Currently Pursuing Diploma">Currently Pursuing Diploma (Polytechnic)</option>
-          <option value="Completed Degree / Graduate">Completed Degree / Graduate</option>
-        </select>
-      </div>
-
-      <button type="submit" class="w-full py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-sm transition shadow-lg shadow-emerald-500/20 cursor-pointer">
-        Enter InternWise Portal &rarr;
-      </button>
-    </form>
-  </div>
-</body>
-</html>"""
-
-# ================= DASHBOARD HTML =================
-DASHBOARD_RAW_HTML = """<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>InternWise - Academic & Career App</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <style>
-    body { font-family: 'Plus Jakarta Sans', sans-serif; -webkit-tap-highlight-color: transparent; }
-    .nav-btn.active { background: #10b981; color: #022c22; font-weight: 800; }
-    .bottom-nav-btn.active { color: #10b981; font-weight: 700; }
-  </style>
-</head>
-<body class="bg-slate-950 text-slate-100 min-h-screen pb-24 md:pb-10">
-  <div class="max-w-5xl mx-auto px-4 py-4 md:py-6">
-    <header class="flex items-center justify-between border-b border-slate-800 pb-4 mb-6">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-500/30 text-slate-950 font-black text-lg">
-          IW
-        </div>
-        <div>
-          <div class="flex items-center gap-2">
-            <h1 class="text-xl font-black tracking-tight">Intern<span class="text-emerald-400">Wise</span></h1>
-            <span class="px-1.5 py-0.5 text-[9px] font-extrabold rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">PRO</span>
-          </div>
-          <p class="text-[11px] text-slate-400 truncate max-w-[200px] sm:max-w-none">Hi, <strong class="text-slate-200">__STUDENT_NAME__</strong></p>
-        </div>
-      </div>
-      
-      <nav class="hidden md:flex items-center gap-1 bg-slate-900 p-1 rounded-2xl border border-slate-800 text-xs">
-        <button onclick="switchTab('notes')" id="nav-notes" class="nav-btn active px-3.5 py-2 rounded-xl transition cursor-pointer">Notes Hub</button>
-        <button onclick="switchTab('doubt')" id="nav-doubt" class="nav-btn px-3.5 py-2 rounded-xl text-slate-300 hover:text-white transition cursor-pointer">AI Doubt Solver</button>
-        <button onclick="switchTab('pyq')" id="nav-pyq" class="nav-btn px-3.5 py-2 rounded-xl text-slate-300 hover:text-white transition cursor-pointer">PYQs</button>
-        <button onclick="switchTab('mock')" id="nav-mock" class="nav-btn px-3.5 py-2 rounded-xl text-slate-300 hover:text-white transition cursor-pointer">Mock Tests</button>
-        <button onclick="switchTab('career')" id="nav-career" class="nav-btn px-3.5 py-2 rounded-xl text-slate-300 hover:text-white transition cursor-pointer">Jobs & Career</button>
-      </nav>
-
-      <a href="/" class="p-2 text-xs rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white">Profile</a>
-    </header>
-
-    <!-- TAB 1: NOTES HUB -->
-    <section id="tab-content-notes" class="space-y-5">
-      <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 space-y-4">
-        <div>
-          <h2 class="text-lg font-bold text-white">Full-Length Academic Notes & Textbook PDF Engine</h2>
-          <p class="text-xs text-slate-400">Download complete multi-page syllabus, algorithms, code proofs and derivations.</p>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div>
-            <label class="block text-xs font-semibold text-slate-300 mb-1">Course</label>
-            <select id="notesCourse" onchange="filterNotes()" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs sm:text-sm text-emerald-400 font-semibold focus:outline-none">
-              <option value="B.Tech">B.Tech / B.E.</option>
-              <option value="BCA">BCA</option>
-              <option value="MCA">MCA</option>
-              <option value="Diploma">Diploma (Polytechnic)</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-slate-300 mb-1">Branch</label>
-            <select id="notesBranch" onchange="filterNotes()" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs sm:text-sm text-slate-200 focus:outline-none">
-              <option value="CSE">Computer Science (CSE)</option>
-              <option value="IT">Information Tech (IT)</option>
-              <option value="AIML">AI & Data Science</option>
-              <option value="ECE">Electronics (ECE)</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-slate-300 mb-1">Semester</label>
-            <select id="notesSem" onchange="filterNotes()" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs sm:text-sm text-slate-200 focus:outline-none">
-              <option value="1">Semester 1</option>
-              <option value="2">Semester 2</option>
-              <option value="3" selected>Semester 3</option>
-              <option value="4">Semester 4</option>
-              <option value="5">Semester 5</option>
-              <option value="6">Semester 6</option>
-              <option value="7">Semester 7</option>
-              <option value="8">Semester 8</option>
-            </select>
-          </div>
-        </div>
-      </div>
-      <div id="notesCardsList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
-    </section>
-
-    <!-- TAB 2: AI DOUBT SOLVER -->
-    <section id="tab-content-doubt" class="hidden space-y-5">
-      <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 space-y-4">
-        <div>
-          <h2 class="text-lg font-bold text-white">24/7 AI Problem & Proof Solver</h2>
-          <p class="text-xs text-slate-400">Ask any complex theory, algorithm, math derivation or code debugging problem.</p>
-        </div>
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-          <input type="text" id="askCourse" placeholder="Course" value="B.Tech" class="bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-200 focus:outline-none" />
-          <input type="text" id="askBranch" placeholder="Branch" value="CSE" class="bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-200 focus:outline-none" />
-          <input type="text" id="askSubject" placeholder="Subject" value="Data Structures" class="bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-200 focus:outline-none" />
-        </div>
-        <textarea id="askQuery" rows="4" placeholder="Write or paste your academic doubt here..." class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs sm:text-sm text-slate-200 focus:border-emerald-500 focus:outline-none resize-none">Explain QuickSort algorithm with partition dry run, best/average/worst case time complexity, and a clean C++/Python implementation.</textarea>
-        <button onclick="askDoubtAI()" id="doubtSubmitBtn" class="w-full py-3.5 rounded-xl bg-emerald-500 text-slate-950 font-bold hover:bg-emerald-400 transition cursor-pointer text-xs sm:text-sm">
-          Get Instant AI Solution
-        </button>
-      </div>
-      <div id="doubtSolutionBox" class="hidden bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 space-y-3">
-        <h3 class="text-xs font-bold text-emerald-400 uppercase tracking-wider">AI Verified Answer</h3>
-        <div id="doubtSolutionText" class="text-xs sm:text-sm text-slate-200 whitespace-pre-wrap leading-relaxed"></div>
-      </div>
-    </section>
-
-    <!-- TAB 3: PYQS -->
-    <section id="tab-content-pyq" class="hidden space-y-5">
-      <div>
-        <h2 class="text-lg font-bold text-white">Previous Year Question Papers (PYQs)</h2>
-        <p class="text-xs text-slate-400">Download university papers with detailed marking schemes and model solutions.</p>
-      </div>
-      <div id="pyqList" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
-    </section>
-
-    <!-- TAB 4: MOCK TESTS -->
-    <section id="tab-content-mock" class="hidden space-y-5">
-      <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 space-y-4">
-        <div>
-          <h2 class="text-lg font-bold text-white">University Mock Test & AI Evaluator</h2>
-          <p class="text-xs text-slate-400">Practice most expected semester exam questions and get instant AI grading.</p>
-        </div>
-        <div class="flex flex-col sm:flex-row gap-3">
-          <select id="mockSubjectPick" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs sm:text-sm text-slate-200 focus:outline-none">
-            <option value="Data Structures & Algorithms">Data Structures & Algorithms (DSA)</option>
-            <option value="Operating Systems">Operating Systems (OS)</option>
-            <option value="Database Management Systems">Database Management Systems (DBMS)</option>
-            <option value="Computer Networks">Computer Networks (CN)</option>
-            <option value="Theory of Computation">Theory of Computation (TOC)</option>
-          </select>
-          <button onclick="generateMockQ()" class="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-100 text-xs sm:text-sm font-bold border border-slate-700 cursor-pointer">
-            Generate Expected Question
-          </button>
-        </div>
-
-        <div id="mockQuestionArea" class="hidden bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3">
-          <span class="text-[10px] font-bold text-emerald-400 uppercase tracking-wide">University 10-Mark Question:</span>
-          <p id="mockQuestionText" class="text-xs sm:text-sm font-semibold text-white"></p>
-          <textarea id="mockUserAns" rows="4" placeholder="Type your answer here..." class="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs sm:text-sm text-slate-200 focus:border-emerald-500 focus:outline-none"></textarea>
-          <button onclick="submitMockGrading()" id="mockGradingBtn" class="px-4 py-2 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs hover:bg-emerald-400 cursor-pointer">
-            Evaluate My Answer
-          </button>
-        </div>
-        <div id="mockEvaluationResult" class="hidden p-4 rounded-2xl bg-slate-950 border border-slate-800 text-xs sm:text-sm space-y-2"></div>
-      </div>
-    </section>
-
-    <!-- TAB 5: JOB & CAREER -->
-    <section id="tab-content-career" class="hidden space-y-5">
-      <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4">
-        <div>
-          <h2 class="text-lg font-bold text-white">AI Career Analyzer & Job Match Engine</h2>
-          <p class="text-xs text-slate-400">Upload your PDF resume to discover strengths, weaknesses, learning roadmap and live openings.</p>
-        </div>
-        <div class="space-y-3">
-          <div>
-            <label class="block text-xs font-semibold text-slate-300 mb-1.5">Upload Resume (PDF)</label>
-            <input type="file" id="resumeFile" accept=".pdf" class="w-full text-xs text-slate-400 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-emerald-500 file:text-slate-950 bg-slate-950 p-2 rounded-xl border border-slate-800" />
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-slate-300 mb-1.5">Target Job Profile / Role</label>
-            <textarea id="jobDescription" rows="2" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs sm:text-sm text-slate-200 focus:border-emerald-500 focus:outline-none resize-none">Looking for Software Development Engineer (SDE) Intern proficient in Python/Java, Data Structures, REST APIs, SQL, and Git.</textarea>
-          </div>
-          <button type="button" id="careerAnalyzeBtn" onclick="runResumeAnalysis()" class="w-full py-3.5 rounded-xl font-bold bg-emerald-500 text-slate-950 hover:bg-emerald-400 transition text-xs sm:text-sm cursor-pointer">
-            Analyze Resume & Find Matching Jobs
-          </button>
-        </div>
-      </div>
-
-      <div id="careerResults" class="hidden space-y-5">
-        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 flex items-center justify-between">
-          <div>
-            <span class="text-[10px] uppercase font-bold text-slate-400">Candidate Match Score</span>
-            <h3 class="text-base font-bold text-white" id="careerFilename">Resume Analysis</h3>
-          </div>
-          <div class="text-3xl sm:text-4xl font-black text-emerald-400" id="careerMatchScore">--%</div>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
-            <h4 class="text-xs font-bold text-emerald-400 uppercase mb-2">Your Strengths (Detected Skills)</h4>
-            <div id="careerDetectedSkills" class="flex flex-wrap gap-1.5"></div>
-          </div>
-          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
-            <h4 class="text-xs font-bold text-rose-400 uppercase mb-2">Your Weaknesses (Missing Skills)</h4>
-            <div id="careerMissingSkills" class="flex flex-wrap gap-1.5"></div>
-          </div>
-        </div>
-
-        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 space-y-3">
-          <h4 class="text-sm font-bold text-emerald-400">2-Week Personalized Skill Upgrade Roadmap</h4>
-          <div id="careerRoadmap" class="space-y-2 text-xs sm:text-sm text-slate-300"></div>
-        </div>
-
-        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 space-y-3">
-          <h4 class="text-sm font-bold text-white flex items-center gap-2">
-            <span>Recommended Job & Internship Openings</span>
-            <span class="text-[10px] px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Active Hiring</span>
-          </h4>
-          <div id="liveJobsList" class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1"></div>
-        </div>
-      </div>
-    </section>
-  </div>
-
-  <div class="md:hidden fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 px-3 py-2 flex justify-around items-center z-50">
-    <button onclick="switchTab('notes')" id="bot-notes" class="bottom-nav-btn active flex flex-col items-center gap-1 text-[10px] text-slate-400">
-      <span>Notes</span>
-    </button>
-    <button onclick="switchTab('doubt')" id="bot-doubt" class="bottom-nav-btn flex flex-col items-center gap-1 text-[10px] text-slate-400">
-      <span>AI Doubt</span>
-    </button>
-    <button onclick="switchTab('pyq')" id="bot-pyq" class="bottom-nav-btn flex flex-col items-center gap-1 text-[10px] text-slate-400">
-      <span>PYQ</span>
-    </button>
-    <button onclick="switchTab('mock')" id="bot-mock" class="bottom-nav-btn flex flex-col items-center gap-1 text-[10px] text-slate-400">
-      <span>Mock</span>
-    </button>
-    <button onclick="switchTab('career')" id="bot-career" class="bottom-nav-btn flex flex-col items-center gap-1 text-[10px] text-slate-400">
-      <span>Careers</span>
-    </button>
-  </div>
-
-  <script>
-    function switchTab(tabName) {
-      document.querySelectorAll('.nav-btn').forEach(function(b) { b.classList.remove('active'); });
-      document.querySelectorAll('.bottom-nav-btn').forEach(function(b) { b.classList.remove('active'); });
-
-      var navEl = document.getElementById('nav-' + tabName);
-      if (navEl) navEl.classList.add('active');
-
-      var botEl = document.getElementById('bot-' + tabName);
-      if (botEl) botEl.classList.add('active');
-
-      ['notes', 'doubt', 'pyq', 'mock', 'career'].forEach(function(s) {
-        var el = document.getElementById('tab-content-' + s);
-        if (el) el.classList.add('hidden');
-      });
-
-      var activeContent = document.getElementById('tab-content-' + tabName);
-      if (activeContent) activeContent.classList.remove('hidden');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    var academicDatabase = {
-      "B.Tech": {
-        "1": [
-          { name: "Engineering Mathematics I", topics: "Matrices, Calculus, Infinite Series, Multivariable Calculus" },
-          { name: "Engineering Physics", topics: "Optics, Lasers, Quantum Mechanics, Nanotechnology, Fiber Optics" },
-          { name: "Basic Electrical Engineering", topics: "DC/AC Circuits, Network Theorems, Transformers, Induction Motors" },
-          { name: "Engineering Mechanics", topics: "Force Systems, Friction, Centroids, Kinematics & Dynamics" },
-          { name: "Basic Mechanical Engineering", topics: "Thermodynamics, IC Engines, Refrigeration, Power Plants" },
-          { name: "Professional Communication", topics: "Technical Writing, Grammar, Business Letters, Soft Skills" }
-        ],
-        "2": [
-          { name: "Programming in C", topics: "Pointers, Dynamic Memory, Recursion, Structures, File I/O" },
-          { name: "Engineering Mathematics II", topics: "Differential Equations, Laplace Transforms, Fourier Series" },
-          { name: "Engineering Chemistry", topics: "Water Technology, Polymers, Corrosion, Electrochemistry" },
-          { name: "Basic Electronics Engineering", topics: "Semiconductors, Diodes, BJT, Operational Amplifiers" },
-          { name: "Engineering Graphics & Design", topics: "Orthographic Projections, Isometric Projections, CAD Tools" },
-          { name: "Environmental Science", topics: "Ecosystems, Pollution Control, Sustainable Development" }
-        ],
-        "3": [
-          { name: "Data Structures & Algorithms (DSA)", topics: "Arrays, Linked Lists, Stacks, Queues, Trees, Graphs, Sorting & Searching" },
-          { name: "Digital Logic & Design (DLD)", topics: "Boolean Algebra, K-Maps, MUX/DEMUX, Flip-Flops, Counters, Shift Registers" },
-          { name: "Discrete Mathematical Structures", topics: "Set Theory, Relations, Group Theory, Graph Theory, Combinatorics" },
-          { name: "Object Oriented Programming (Java/C++)", topics: "Classes, Objects, Inheritance, Polymorphism, Abstraction, Exception Handling" },
-          { name: "Computer Organization & Architecture (COA)", topics: "Instruction Set, Pipelining, Memory Hierarchy, Cache Mapping, Control Unit" },
-          { name: "Universal Human Values & Ethics", topics: "Self-Exploration, Harmony in Self, Society and Nature, Professional Ethics" }
-        ],
-        "4": [
-          { name: "Operating Systems (OS)", topics: "Process Scheduling, Deadlocks, Memory Management, Virtual Memory, File Systems" },
-          { name: "Database Management Systems (DBMS)", topics: "ER Modeling, Relational Algebra, SQL, Normalization (1NF-BCNF), Transactions" },
-          { name: "Theory of Computation (TOC)", topics: "Finite Automata, Regular Expressions, CFL, Pushdown Automata, Turing Machines" },
-          { name: "Design & Analysis of Algorithms (DAA)", topics: "Divide & Conquer, Dynamic Programming, Greedy Method, Backtracking, NP-Complete" },
-          { name: "Software Engineering", topics: "SDLC Models, Agile, Scrum, Software Testing, SRS & Design Patterns" },
-          { name: "Applied Mathematics III", topics: "Probability Distributions, Numerical Methods, Statistics, Curve Fitting" }
-        ],
-        "5": [
-          { name: "Computer Networks (CN)", topics: "OSI & TCP/IP Model, Flow/Error Control, Subnetting, Routing (RIP, OSPF, BGP)" },
-          { name: "Compiler Design", topics: "Lexical Analysis, Top-Down/Bottom-Up Parsing, Intermediate Code, Code Optimization" },
-          { name: "Web Technologies & Full Stack", topics: "HTML5/CSS3, JavaScript, React/Node.js basics, RESTful APIs, Web Security" },
-          { name: "Cybersecurity & Cryptography", topics: "Symmetric/Asymmetric Ciphers, RSA, AES, Hash Functions, Network Security" },
-          { name: "Microprocessors & Microcontrollers", topics: "8085/8086 Architecture, Assembly Programming, Interfacing, Interrupts" }
-        ],
-        "6": [
-          { name: "Artificial Intelligence & Machine Learning", topics: "Search Algorithms, Supervised/Unsupervised Learning, Neural Networks" },
-          { name: "Cloud Computing & DevOps", topics: "Virtualization, AWS/GCP Basics, Docker, Kubernetes, CI/CD Pipelines" },
-          { name: "Data Warehousing & Data Mining", topics: "ETL, Data Cubes, Association Rules, Clustering, Classification" },
-          { name: "Mobile App Development", topics: "Android/Flutter Architecture, UI Layouts, SQLite, Firebase Integration" },
-          { name: "Internet of Things (IoT)", topics: "Sensors, Actuators, Arduino, Raspberry Pi, MQTT, IoT Cloud" }
-        ],
-        "7": [
-          { name: "Distributed Systems & Cloud Systems", topics: "RPC, MapReduce, Consensus (Raft/Paxos), Microservices, CAP Theorem" },
-          { name: "Deep Learning & NLP", topics: "CNN, RNN, LSTM, Transformers, Text Preprocessing, Embeddings" },
-          { name: "Big Data Analytics", topics: "Hadoop Architecture, HDFS, Apache Spark, NoSQL (MongoDB, Cassandra)" },
-          { name: "High Performance Computing", topics: "Parallel Computing, OpenMP, MPI, GPU CUDA Programming" }
-        ],
-        "8": [
-          { name: "System Design & Architecture", topics: "Scalability, Load Balancing, Caching (Redis), Database Sharding, HLD/LLD" },
-          { name: "Major Capstone Project Preparation", topics: "System Architecture, Testing, Deployment, Code Documentation, Viva Defense" },
-          { name: "Entrepreneurship & Startup Management", topics: "Business Models, Lean Startup, Funding, IP & Patent Filing" }
-        ]
-      }
-    };
-
-    // Multi-page PDF Generator with automatic pagination and margins
-    function generateMultiPagePDF(filename, title, subHeader, unitsList) {
-      if (!window.jspdf || !window.jspdf.jsPDF) {
-        alert("PDF generator initializing, please try again in 2 seconds.");
-        return;
-      }
-      var doc = new window.jspdf.jsPDF();
-      var pageWidth = 210;
-      var margin = 14;
-      var maxLineWidth = pageWidth - (margin * 2);
-
-      // Cover / Header Banner
-      doc.setFillColor(15, 23, 42);
-      doc.rect(0, 0, pageWidth, 28, 'F');
-
-      doc.setTextColor(16, 185, 129);
-      doc.setFontSize(14);
-      doc.setFont("helvetica", "bold");
-      doc.text("INTERNWISE ACADEMIC MASTERCLASS", margin, 13);
-
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(9);
-      doc.setFont("helvetica", "normal");
-      doc.text(subHeader, margin, 21);
-
-      doc.setTextColor(15, 23, 42);
-      doc.setFontSize(14);
-      doc.setFont("helvetica", "bold");
-      doc.text(title, margin, 38);
-
-      var yPos = 48;
-
-      unitsList.forEach(function(unitItem, idx) {
-        if (yPos > 240) {
-          doc.addPage();
-          yPos = 20;
-        }
-
-        // Unit Title Box
-        doc.setFillColor(241, 245, 249);
-        doc.rect(margin, yPos - 5, maxLineWidth, 8, 'F');
-        doc.setTextColor(5, 150, 105);
-        doc.setFontSize(11);
-        doc.setFont("helvetica", "bold");
-        doc.text(unitItem.title || ("MODULE " + (idx + 1)), margin + 2, yPos);
-        yPos += 9;
-
-        // Content
-        doc.setTextColor(30, 41, 59);
-        doc.setFontSize(9);
-        doc.setFont("helvetica", "normal");
-
-        var lines = doc.splitTextToSize(unitItem.content, maxLineWidth);
-        for (var i = 0; i < lines.length; i++) {
-          if (yPos > 270) {
-            doc.addPage();
-            yPos = 20;
-          }
-          doc.text(lines[i], margin, yPos);
-          yPos += 4.5;
-        }
-        yPos += 6;
-      });
-
-      // Add page numbering & footer to all pages
-      var totalPages = doc.internal.getNumberOfPages();
-      for (var p = 1; p <= totalPages; p++) {
-        doc.setPage(p);
-        doc.setDrawColor(226, 232, 240);
-        doc.line(margin, 282, pageWidth - margin, 282);
-        doc.setFontSize(8);
-        doc.setTextColor(148, 163, 184);
-        doc.text("Verified University Syllabus & Exam Prep • InternWise Pro", margin, 287);
-        doc.text("Page " + p + " of " + totalPages, pageWidth - margin - 18, 287);
-      }
-
-      doc.save(filename);
-    }
-
-    async function triggerNotesDownload(subName, topics, course, branch, sem, btnId) {
-      var btn = document.getElementById(btnId);
-      var originalText = btn ? btn.innerHTML : '';
-      if (btn) {
-        btn.disabled = true;
-        btn.innerHTML = '<span>Generating Deep Masterclass PDF...</span>';
-      }
-
-      try {
-        var res = await fetch('/api/generate-full-notes', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ subject: subName, course: course, branch: branch, semester: sem, topics: topics })
-        });
-        var data = await res.json();
-        var filename = subName.replace(/[^a-zA-Z0-9]/g, "_") + "_Masterclass_Notes.pdf";
-        var subHeader = course + " (" + branch + ") • Semester " + sem + " Comprehensive Study Notes";
-        
-        generateMultiPagePDF(filename, subName, subHeader, data.units || []);
-      } catch (err) {
-        alert("PDF Generation Error: " + err.message);
-      } finally {
-        if (btn) {
-          btn.disabled = false;
-          btn.innerHTML = originalText;
-        }
-      }
-    }
-
-    function filterNotes() {
-      var course = (document.getElementById('notesCourse') || {}).value || 'B.Tech';
-      var branch = (document.getElementById('notesBranch') || {}).value || 'CSE';
-      var sem = (document.getElementById('notesSem') || {}).value || '3';
-      var container = document.getElementById('notesCardsList');
-      if (!container) return;
-
-      var courseData = academicDatabase[course] || academicDatabase["B.Tech"];
-      var list = courseData[sem] || courseData["3"] || [];
-
-      var html = '';
-      list.forEach(function(item, idx) {
-        var safeName = item.name.replace(/'/g, "\\\\'");
-        var safeTopics = item.topics.replace(/'/g, "\\\\'");
-        var btnId = 'notes-btn-' + idx;
-        html += '<div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 flex flex-col justify-between space-y-3 hover:border-emerald-500/40 transition">' +
-          '<div>' +
-            '<div class="flex items-center justify-between">' +
-              '<span class="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">' + course + ' ' + branch + ' • Sem ' + sem + '</span>' +
-              '<span class="text-[9px] font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-300">Verified Masterclass</span>' +
-            '</div>' +
-            '<h3 class="text-sm font-bold text-white mt-1.5">' + item.name + '</h3>' +
-            '<p class="text-xs text-slate-400 mt-1 leading-relaxed"><strong>Core Syllabus:</strong> ' + item.topics + '</p>' +
-          '</div>' +
-          '<button id="' + btnId + '" onclick="triggerNotesDownload(\\'' + safeName + '\\', \\'' + safeTopics + '\\', \\'' + course + '\\', \\'' + branch + '\\', \\'' + sem + '\\', \\'' + btnId + '\\')" class="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-xs font-bold text-slate-950 flex items-center justify-center gap-1.5 cursor-pointer transition">' +
-            '<span>Download Deep Notes (PDF)</span>' +
-          '</button>' +
-        '</div>';
-      });
-      container.innerHTML = html;
-    }
-
-    var pyqData = [
-      { subject: "Data Structures & Algorithms", sem: "Semester 3", year: "2024 End-Term", marks: "100 Marks" },
-      { subject: "Operating Systems", sem: "Semester 4", year: "2024 Mid-Term", marks: "50 Marks" },
-      { subject: "Database Management Systems", sem: "Semester 4", year: "2023 End-Term", marks: "100 Marks" },
-      { subject: "Computer Networks", sem: "Semester 5", year: "2024 End-Term", marks: "100 Marks" },
-      { subject: "Theory of Computation", sem: "Semester 4", year: "2024 End-Term", marks: "100 Marks" }
-    ];
-
-    function triggerPyqDownload(subject, sem, year, marks) {
-      var filename = subject.replace(/[^a-zA-Z0-9]/g, "_") + "_" + year.replace(/[^a-zA-Z0-9]/g, "_") + "_Paper.pdf";
-      var subHeader = "University End-Semester Examination • " + sem;
-      
-      var sections = [
-        {
-          title: "Examination Instructions & Blueprint",
-          content: "Session: " + year + " | Maximum Marks: " + marks + " | Time Allowed: 3 Hours\\nNote: Section A is compulsory (10 x 2 = 20 Marks). Answer any 4 questions from Section B (4 x 20 = 80 Marks)."
-        },
-        {
-          title: "SECTION A: Short Technical Conceptual Questions (2 Marks Each)",
-          content: "Q1. Define Asymptotic notations (Big-O, Omega, Theta) with formal mathematical definitions.\\nQ2. Differentiate between static array allocation and dynamic pointer linked lists.\\nQ3. State the time and space complexity of MergeSort and explain its auxiliary array overhead.\\nQ4. What is a balanced binary tree? State the balance factor condition for AVL trees.\\nQ5. Explain the significance of Modulo arithmetic in Circular Queue implementations."
-        },
-        {
-          title: "SECTION B: Comprehensive 10-Mark Analytical Problems",
-          content: "Q6. Explain QuickSort partition logic. Trace dry-run step-by-step for the array [38, 27, 43, 3, 9, 82, 10] and calculate Best, Average and Worst case recurrence relations.\\n\\nQ7. Explain Deadlock in Operating Systems. State the 4 Coffman conditions and demonstrate Banker's Algorithm with a safety check matrix.\\n\\nQ8. Compare 3NF and BCNF with functional dependency examples and schema decomposition proofs."
-        },
-        {
-          title: "SECTION C: Model Answer Blueprint & Grading Rubric",
-          content: "• For 10-mark questions: 3 marks allocated for clear block diagram/flowchart, 4 marks for mathematical/asymptotic derivation, 3 marks for edge cases and clean code.\\n• Practice using InternWise AI Doubt Solver for step-by-step debugging."
-        }
-      ];
-
-      generateMultiPagePDF(filename, subject + " (" + year + ")", subHeader, sections);
-    }
-
-    function loadPyqList() {
-      var container = document.getElementById('pyqList');
-      if (!container) return;
-      var html = '';
-      pyqData.forEach(function(p) {
-        var safeSub = p.subject.replace(/'/g, "\\\\'");
-        html += '<div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 flex items-center justify-between hover:border-emerald-500/40 transition">' +
-          '<div>' +
-            '<span class="text-[10px] font-bold text-emerald-400 uppercase">' + p.sem + '</span>' +
-            '<h4 class="text-sm font-bold text-white mt-0.5">' + p.subject + '</h4>' +
-            '<p class="text-xs text-slate-400 mt-0.5">' + p.year + ' • ' + p.marks + '</p>' +
-          '</div>' +
-          '<button onclick="triggerPyqDownload(\\'' + safeSub + '\\', \\'' + p.sem + '\\', \\'' + p.year + '\\', \\'' + p.marks + '\\')" class="px-3.5 py-2 text-xs font-bold rounded-xl bg-emerald-500 text-slate-950 hover:bg-emerald-400 cursor-pointer transition">Download (PDF)</button>' +
-        '</div>';
-      });
-      container.innerHTML = html;
-    }
-
-    async function askDoubtAI() {
-      var query = document.getElementById('askQuery').value;
-      var course = document.getElementById('askCourse').value || 'B.Tech';
-      var branch = document.getElementById('askBranch').value || 'CSE';
-      var subject = document.getElementById('askSubject').value || 'Computer Science';
-      var btn = document.getElementById('doubtSubmitBtn');
-
-      if (!query.trim()) { alert('Pehle apna doubt likhein.'); return; }
-      btn.disabled = true;
-      btn.innerText = 'AI is solving with full details...';
-
-      try {
-        var res = await fetch('/api/btech-doubt-solver', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query: query, course: course, branch: branch, semester: 'All', subject: subject })
-        });
-        var data = await res.json();
-        document.getElementById('doubtSolutionText').textContent = data.solution || "No response received.";
-        document.getElementById('doubtSolutionBox').classList.remove('hidden');
-        document.getElementById('doubtSolutionBox').scrollIntoView({ behavior: 'smooth' });
-      } catch (e) {
-        alert('Server Connection Error: ' + e.message);
-      } finally {
-        btn.disabled = false;
-        btn.innerText = 'Get Instant AI Solution';
-      }
-    }
-
-    var expectedMockBank = {
-      "Data Structures & Algorithms": "Explain QuickSort partition algorithm with step-by-step dry run, best/worst case time complexities and write a clean implementation.",
-      "Operating Systems": "What is Deadlock? List the 4 Coffman conditions and explain Banker's Algorithm with a resource allocation matrix example.",
-      "Database Management Systems": "Explain differences between 3NF and BCNF with functional dependency examples and schema decomposition steps.",
-      "Computer Networks": "Explain the 3-Way Handshake mechanism in TCP, describe SYN Flood attacks, and how SYN cookies mitigate it.",
-      "Theory of Computation": "State pumping lemma for regular languages and prove that L = {0^n 1^n | n >= 0} is not regular."
-    };
-
-    function generateMockQ() {
-      var sub = document.getElementById('mockSubjectPick').value;
-      document.getElementById('mockQuestionText').textContent = expectedMockBank[sub] || 'Explain core principles and algorithms in ' + sub;
-      document.getElementById('mockQuestionArea').classList.remove('hidden');
-      document.getElementById('mockEvaluationResult').classList.add('hidden');
-      document.getElementById('mockUserAns').value = '';
-    }
-
-    async function submitMockGrading() {
-      var sub = document.getElementById('mockSubjectPick').value;
-      var q = document.getElementById('mockQuestionText').textContent;
-      var ans = document.getElementById('mockUserAns').value;
-      var btn = document.getElementById('mockGradingBtn');
-
-      if (!ans.trim()) { alert('Pehle apna answer likhein.'); return; }
-      btn.disabled = true;
-      btn.innerText = 'Grading your answer...';
-
-      try {
-        var res = await fetch('/api/evaluate-mock-test', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ subject: sub, question: q, user_answer: ans })
-        });
-        var data = await res.json();
-        var out = document.getElementById('mockEvaluationResult');
-        out.innerHTML = '<div class="flex justify-between items-center"><span class="font-bold text-white">Score: <strong class="text-emerald-400 text-base">' + (data.score || '8') + '/10</strong></span></div>' +
-          '<p class="text-slate-300"><strong>AI Feedback:</strong> ' + (data.feedback || 'Good attempt.') + '</p>' +
-          '<p class="text-xs text-slate-400 border-t border-slate-800 pt-2"><strong class="text-emerald-400">Exam Key Points:</strong> ' + (data.ideal_points || 'Cover time complexity and diagrams.') + '</p>';
-        out.classList.remove('hidden');
-      } catch (err) {
-        alert('Grading error: ' + err.message);
-      } finally {
-        btn.disabled = false;
-        btn.innerText = 'Evaluate My Answer';
-      }
-    }
-
-    async function runResumeAnalysis() {
-      var fileInput = document.getElementById('resumeFile');
-      var jobDesc = document.getElementById('jobDescription');
-      var btn = document.getElementById('careerAnalyzeBtn');
-
-      if (!fileInput.files || fileInput.files.length === 0) { alert('PDF Resume select karein.'); return; }
-      btn.disabled = true;
-      btn.innerText = 'AI is analyzing strengths, gaps & matching jobs...';
-
-      var formData = new FormData();
-      formData.append('file', fileInput.files[0]);
-      formData.append('job_description', jobDesc.value);
-
-      try {
-        var res = await fetch('/api/analyze-resume', { method: 'POST', body: formData });
-        var data = await res.json();
-        var analysis = data.ai_analysis || {};
-
-        document.getElementById('careerFilename').textContent = data.filename || 'Resume Profile';
-        document.getElementById('careerMatchScore').textContent = (analysis.match_percentage || 78) + '%';
-
-        var dHtml = '';
-        (analysis.candidate_skills || ['Python', 'SQL', 'Git', 'Data Structures']).forEach(s => {
-          dHtml += '<span class="px-2.5 py-1 text-xs rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold">' + s + '</span>';
-        });
-        document.getElementById('careerDetectedSkills').innerHTML = dHtml;
-
-        var mHtml = '';
-        (analysis.missing_skills || ['Docker', 'CI/CD Pipelines', 'System Design']).forEach(s => {
-          mHtml += '<span class="px-2.5 py-1 text-xs rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/20 font-semibold">' + s + '</span>';
-        });
-        document.getElementById('careerMissingSkills').innerHTML = mHtml;
-
-        var rHtml = '';
-        (analysis.learning_roadmap || ['Week 1: Core System Principles & APIs', 'Week 2: Scalable Projects & Cloud Deployment']).forEach((step, i) => {
-          rHtml += '<div class="flex items-start gap-2"><strong class="text-emerald-400">Day ' + ((i+1)*2) + ':</strong> <span>' + step + '</span></div>';
-        });
-        document.getElementById('careerRoadmap').innerHTML = rHtml;
-
-        var jHtml = '';
-        (data.recommended_jobs || []).forEach(job => {
-          jHtml += '<div class="bg-slate-950 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between space-y-2">' +
-            '<div>' +
-              '<span class="text-[10px] font-bold text-emerald-400 uppercase">' + job.company + '</span>' +
-              '<h5 class="text-xs sm:text-sm font-bold text-white">' + job.role + '</h5>' +
-              '<p class="text-[11px] text-slate-400">' + job.location + ' • ' + job.type + '</p>' +
-            '</div>' +
-            '<a href="' + job.link + '" target="_blank" class="w-full py-2 text-center rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold border border-slate-700 block transition cursor-pointer">' +
-              'Apply Now &rarr;' +
-            '</a>' +
-          '</div>';
-        });
-        document.getElementById('liveJobsList').innerHTML = jHtml;
-
-        document.getElementById('careerResults').classList.remove('hidden');
-        document.getElementById('careerResults').scrollIntoView({ behavior: 'smooth' });
-      } catch (err) {
-        alert('Resume Analysis Error: ' + err.message);
-      } finally {
-        btn.disabled = false;
-        btn.innerText = 'Analyze Resume & Find Matching Jobs';
-      }
-    }
-
-    filterNotes();
-    loadPyqList();
-  </script>
-</body>
-</html>"""
-
-# ================= BACKEND APIS =================
 @app.get("/", response_class=HTMLResponse)
-def serve_login():
-    return LOGIN_HTML
+def home():
+    return (BASE.parent/"frontend"/"index.html").read_text(encoding="utf-8")
 
-@app.get("/dashboard", response_class=HTMLResponse)
-def serve_dashboard(name: str = "Aditya Kumar", status: str = "Currently Pursuing B.Tech / BE"):
-    page = DASHBOARD_RAW_HTML.replace("__STUDENT_NAME__", name).replace("__STUDENT_STATUS__", status)
-    return HTMLResponse(content=page)
+@app.get("/api/subjects")
+def subjects(semester: int):
+    if semester not in SUBJECTS: raise HTTPException(400, "Semester must be 1-8")
+    return {"semester": semester, "subjects": SUBJECTS[semester]}
+
+@app.get("/api/resources")
+def resources(semester: Optional[int]=None, subject: Optional[str]=None, resource_type: Optional[str]=None):
+    with Session(engine) as s:
+        q = select(Resource).order_by(Resource.semester, Resource.subject, Resource.resource_type)
+        if semester: q=q.where(Resource.semester==semester)
+        if subject: q=q.where(Resource.subject==subject)
+        if resource_type: q=q.where(Resource.resource_type==resource_type)
+        rows=s.scalars(q).all()
+        return [{"id":r.id,"title":r.title,"semester":r.semester,"subject":r.subject,"type":r.resource_type,"year":r.year,"description":r.description,"demo":r.is_demo,"has_file":bool(r.file_name)} for r in rows]
+
+@app.get("/api/resources/{rid}")
+def resource(rid:int):
+    with Session(engine) as s:
+        r=s.get(Resource,rid)
+        if not r: raise HTTPException(404,"Resource not found")
+        return {"id":r.id,"title":r.title,"semester":r.semester,"subject":r.subject,"type":r.resource_type,"year":r.year,"description":r.description,"content":r.content,"file_url":f"/api/resources/{rid}/file" if r.file_name else None,"demo":r.is_demo}
+
+@app.get("/api/resources/{rid}/file")
+def resource_file(rid:int):
+    with Session(engine) as s:
+        r=s.get(Resource,rid)
+        if not r or not r.file_name: raise HTTPException(404,"PDF not found")
+        path=PDF_DIR/r.file_name
+        if not path.exists(): raise HTTPException(404,"PDF missing")
+        return FileResponse(path, media_type="application/pdf", filename=path.name)
+
+@app.post("/api/resources/upload")
+async def upload_resource(x_admin_key: str = Header(default=""), semester:int=Form(...), subject:str=Form(...), resource_type:str=Form(...), title:str=Form(...), year:Optional[int]=Form(None), description:str=Form(""), pdf:UploadFile=File(...)):
+    if x_admin_key != ADMIN_KEY: raise HTTPException(401,"Invalid admin key")
+    if resource_type not in {"notes","pyq"}: raise HTTPException(400,"resource_type must be notes or pyq")
+    if pdf.content_type != "application/pdf": raise HTTPException(400,"Only PDF files are allowed")
+    data=await pdf.read()
+    if len(data)>15*1024*1024: raise HTTPException(413,"PDF must be <=15 MB")
+    name=f"{uuid.uuid4().hex}.pdf"; (PDF_DIR/name).write_bytes(data)
+    with Session(engine) as s:
+        r=Resource(title=title,semester=semester,subject=subject,resource_type=resource_type,year=year,description=description,file_name=name,is_demo=False)
+        s.add(r); s.commit(); s.refresh(r)
+        return {"ok":True,"id":r.id,"file_url":f"/api/resources/{r.id}/file"}
 
 @app.post("/api/generate-full-notes")
-async def generate_full_notes(req: NotesGenRequest):
-    fallback_units = [
-        {
-            "title": f"UNIT 1: Core Fundamentals & Mathematical Models of {req.subject}",
-            "content": f"1. Theoretical Foundations:\n• Comprehensive overview of {req.subject}, architectural definitions, and system models.\n• Memory layout considerations and standard state transitions.\n\n2. Key Mathematical Formulations:\n• Recurrence Relations: T(n) = aT(n/b) + f(n) solved using Master Theorem.\n• Asymptotic bounds: Big-O (Worst case upper bound), Omega (Best case lower bound), Theta (Tight asymptotic bound).\n\n3. Memory Architecture:\n• Contiguous allocation vs Dynamic Heap pointer allocation.\n• Cache locality benefits in sequential iteration versus linked structures."
-        },
-        {
-            "title": f"UNIT 2: Deep Syllabus Module & Implementation Breakdown",
-            "content": f"Detailed Technical Concepts for: {req.topics}\n\n" + "\n\n".join([f"• Sub-Topic {i+1} Deep Dive ({t.strip()}):\n  - Definition & Mechanics: In-depth working mechanism, data invariants, and edge conditions.\n  - Code Implementation Blueprint: Standard C++/Python logic with pointers/references and boundary validations.\n  - Complexity Analysis: Time Complexity = O(N log N) / O(1) random access; Auxiliary Space Complexity = O(N)." for i, t in enumerate(req.topics.split(","))])
-        },
-        {
-            "title": "UNIT 3: University 10-Mark Solved Questions & Exam Defense",
-            "content": "Q1. Explain the architectural tradeoffs and asymptotic differences between linear and non-linear implementations.\nAnswer: Linear data structures provide contiguous cache hits but suffer from fixed reallocation costs O(N). Non-linear tree/graph models allow dynamic logarithmic searching O(log N) at the cost of pointer overhead.\n\nQ2. State standard derivation steps for Best, Average, and Worst case time complexities.\nAnswer: Derive step-by-step recursive tree expansion and demonstrate height bounds with induction proof."
-        }
-    ]
-
-    if not client:
-        return {"units": fallback_units}
-
-    prompt = f"""
-    You are an elite Computer Science Professor authoring a comprehensive B.Tech Engineering Handbook.
-    Subject: {req.subject}
-    Course & Branch: {req.course} {req.branch} (Semester {req.semester})
-    Topics Covered: {req.topics}
-
-    Generate an exhaustive, textbook-grade study material organized into 4 Units.
-    Each unit must include:
-    - In-depth theoretical explanations and formal definitions.
-    - Code logic / pseudocode / algorithms.
-    - Asymptotic complexity (Time & Space).
-    - Solved university 10-mark exam questions.
-
-    Return ONLY a valid JSON object matching this schema:
-    {{
-        "units": [
-            {{
-                "title": "UNIT 1: ...",
-                "content": "Exhaustive multi-paragraph textbook material..."
-            }},
-            {{
-                "title": "UNIT 2: ...",
-                "content": "Exhaustive multi-paragraph textbook material..."
-            }},
-            {{
-                "title": "UNIT 3: ...",
-                "content": "Exhaustive multi-paragraph textbook material..."
-            }},
-            {{
-                "title": "UNIT 4: Solved University Exam Questions & Scoring Rubric",
-                "content": "Exhaustive 10-mark questions with model answers..."
-            }}
-        ]
-    }}
-    """
-    for model_name in ["gemini-2.5-flash", "gemini-2.0-flash"]:
-        try:
-            response = client.models.generate_content(
-                model=model_name,
-                contents=prompt,
-                config=types.GenerateContentConfig(response_mime_type="application/json")
-            )
-            return json.loads(response.text)
-        except Exception:
-            continue
-
-    return {"units": fallback_units}
+def generate_notes(req: NotesGenRequest):
+    if req.semester not in SUBJECTS: raise HTTPException(400,"Semester must be 1-8")
+    prompt=f"Create exam-ready B.Tech notes for {req.subject}, semester {req.semester}. Use {req.units} units. Include definitions, explanations, formulas/algorithms where relevant, examples, common mistakes, 2/5/10-mark questions and viva questions. Markdown only, concise but useful."
+    text=ai_text(prompt) or NOTE_TEMPLATE.format(subject=req.subject, semester=req.semester)
+    return {"subject":req.subject,"semester":req.semester,"content":text,"ai":bool(client)}
 
 @app.post("/api/btech-doubt-solver")
-async def btech_doubt_solver(req: DoubtRequest):
-    if not client:
-        return {"solution": "⚠️ Gemini API Key missing in Render Environment. Please set GEMINI_API_KEY."}
-
-    prompt = f"""
-    You are an elite Computer Science Professor and B.Tech Academic Mentor.
-    Course: {req.course} | Branch: {req.branch} | Subject: {req.subject}
-    Student Doubt: {req.query}
-
-    Provide an exhaustive step-by-step educational answer with code, derivations, and exam scoring key points.
-    """
-    for model_name in ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]:
-        try:
-            response = client.models.generate_content(
-                model=model_name,
-                contents=prompt
-            )
-            if response and response.text:
-                return {"solution": response.text}
-        except Exception:
-            continue
-
-    return {"solution": "⚠️ AI Model busy. Please try again."}
+def doubt(req:DoubtRequest):
+    prompt=f"You are a B.Tech tutor. Subject: {req.subject}; Semester: {req.semester}. Answer this doubt clearly. Start with a one-line answer, then explain step-by-step, give a small example, and end with 2 exam tips. Question: {req.question}"
+    answer=ai_text(prompt) or f"### Short answer\nYour doubt is about **{req.subject}**.\n\n### Step-by-step\n1. Identify the definition/concept involved.\n2. Break the problem into smaller parts.\n3. Apply the relevant formula, rule or algorithm.\n4. Verify the result with an example.\n\n### Exam tip\nWrite the definition first, then steps/diagram, then a conclusion.\n\n*AI key not configured, so this is fallback tutor guidance.*"
+    return {"answer":answer,"ai":bool(client)}
 
 @app.post("/api/evaluate-mock-test")
-async def evaluate_mock_test(req: TestEvalRequest):
-    if not client:
-        return {"score": 8, "feedback": "Good fundamental answer.", "ideal_points": "Include complexity proofs and diagrams."}
-
-    prompt = f"""
-    Subject: {req.subject}
-    Question: {req.question}
-    Student Answer: {req.user_answer}
-
-    Grade this answer out of 10 for university standard.
-    Return ONLY a valid JSON object:
-    {{
-        "score": 8,
-        "feedback": "Concise feedback on accuracy",
-        "ideal_points": "Key definitions and diagrams required for 10/10 marks"
-    }}
-    """
-    for model_name in ["gemini-2.5-flash", "gemini-2.0-flash"]:
-        try:
-            response = client.models.generate_content(
-                model=model_name,
-                contents=prompt,
-                config=types.GenerateContentConfig(response_mime_type="application/json")
-            )
-            return json.loads(response.text)
-        except Exception:
-            continue
-
-    return {"score": 8, "feedback": "Solid answer.", "ideal_points": "Add complexity proofs."}
+def evaluate(req:TestEvalRequest):
+    answered=sum(1 for q in req.questions if (q.answer or '').strip())
+    total=len(req.questions)
+    score=round(answered/total*100) if total else 0
+    ai_feedback=None
+    if client:
+        prompt="Evaluate these B.Tech mock-test answers. Return JSON with score_percent (0-100), strengths(array), weaknesses(array), study_plan(array), feedback(string). Be strict but constructive.\n"+json.dumps(req.model_dump())
+        try: ai_feedback=extract_json(ai_text(prompt) or "")
+        except Exception: ai_feedback=None
+    if not ai_feedback:
+        ai_feedback={"score_percent":score,"strengths":["Attempted questions" if answered else "Start attempting questions"],"weaknesses":["Answers need topic-specific checking in fallback mode"],"study_plan":[f"Revise {req.subject} core concepts","Practice 10 previous questions","Take another timed mock"],"feedback":f"You attempted {answered}/{total} questions. Configure GEMINI_API_KEY for detailed AI answer-by-answer evaluation."}
+    return ai_feedback | {"ai":bool(client)}
 
 @app.post("/api/analyze-resume")
-async def analyze_resume(file: UploadFile = File(...), job_description: str = Form(...)):
-    extracted_text = ""
+async def analyze_resume(pdf: UploadFile=File(...)):
+    if pdf.content_type != "application/pdf": raise HTTPException(400,"Upload a PDF resume")
+    data=await pdf.read()
+    if len(data)>10*1024*1024: raise HTTPException(413,"Resume must be <=10 MB")
     try:
-        pdf_bytes = await file.read()
-        reader = PdfReader(io.BytesIO(pdf_bytes))
-        extracted_text = " ".join([page.extract_text() or "" for page in reader.pages]).strip()
-    except Exception:
-        extracted_text = "Software Engineering Student"
+        reader=PdfReader(io.BytesIO(data)); text="\n".join((p.extract_text() or "") for p in reader.pages)
+    except Exception as e: raise HTTPException(400,f"Could not read PDF: {e}")
+    if len(text.strip())<30: raise HTTPException(400,"Could not extract enough text. Upload a text-based PDF.")
+    prompt="""Analyze this B.Tech student's resume for internships/jobs in India. Return JSON only with: quality_score (0-100), summary, strengths(array), missing_skills(array), priority_skills(array), projects_to_build(array), ats_tips(array), suitable_roles(array), companies(array of objects with name, reason, estimated_package, platform), platforms(array of objects with name, search_url_hint), salary_estimate (string), 30_day_plan(array). Do not claim a guaranteed salary/job. Keep package as a realistic approximate range and explain that it varies. Resume:\n"""+text[:45000]
+    result=None
+    if client:
+        try: result=extract_json(ai_text(prompt) or "")
+        except Exception: result=None
+    if not result:
+        low=text.lower()
+        skills=[]
+        for k in ["python","java","c++","c","javascript","react","sql","html","css","git","fastapi","machine learning","data structures","aws"]:
+            if k in low: skills.append(k)
+        missing=[k for k in ["dsa","sql","git","projects","communication","aptitude"] if k not in low]
+        result={"quality_score":65,"summary":"Decent starting resume; strengthen evidence of projects, measurable outcomes and job-ready skills.","strengths":skills[:6] or ["B.Tech profile"],"missing_skills":missing,"priority_skills":missing[:4],"projects_to_build":["One full-stack project","One DSA/problem-solving project","Deploy one project and add GitHub link"],"ats_tips":["Use a clean one-page format","Add measurable results","Match keywords to each job description"],"suitable_roles":["Software Developer Intern","Web Developer Intern","Graduate Software Engineer"],"companies":[{"name":"TCS","reason":"Large graduate hiring ecosystem","estimated_package":"~₹3–7 LPA","platform":"Naukri/LinkedIn"},{"name":"Infosys","reason":"Graduate and fresher opportunities","estimated_package":"~₹3.5–7 LPA","platform":"LinkedIn/Official careers"},{"name":"Accenture","reason":"Technology and analyst roles","estimated_package":"~₹4–8 LPA","platform":"Naukri/LinkedIn"}],"platforms":[{"name":"LinkedIn","search_url_hint":"Search your role + internship/fresher"},{"name":"Naukri","search_url_hint":"Search B.Tech fresher + role"},{"name":"Internshala","search_url_hint":"Search software development internships"}],"salary_estimate":"For a fresher, roughly ₹3–8 LPA is a broad starting range; skills, location and company can move this substantially.","30_day_plan":["Week 1: DSA + SQL","Week 2: Build/deploy project","Week 3: Resume + GitHub + LinkedIn","Week 4: Apply to 10–15 targeted roles/day and practice interviews"]}
+    return result | {"ai":bool(client),"extracted_chars":len(text)}
 
-    recommended_jobs = [
-        {
-            "company": "Google / Microsoft Careers",
-            "role": "Software Engineering Intern / New Grad",
-            "location": "Bengaluru / Hyderabad (Remote options)",
-            "type": "Full-Time / Internship",
-            "link": "https://www.google.com/about/careers/applications/jobs/results"
-        },
-        {
-            "company": "Internshala Direct Hiring",
-            "role": "Python Backend & AI Developer",
-            "location": "Noida / Gurgaon / Remote",
-            "type": "Stipend: ₹25,000 - ₹40,000 / Month",
-            "link": "https://internshala.com/internships/computer-science-internship"
-        },
-        {
-            "company": "LinkedIn Job Portal",
-            "role": "Associate Software Engineer (SDE-1)",
-            "location": "India (Hybrid)",
-            "type": "Entry Level Role",
-            "link": "https://www.linkedin.com/jobs/software-engineer-intern-jobs"
-        },
-        {
-            "company": "Wellfound (AngelList)",
-            "role": "Full Stack / AI Intern at High-Growth Startup",
-            "location": "Bangalore / Remote",
-            "type": "Internship with PPO Opportunity",
-            "link": "https://wellfound.com/jobs"
-        }
-    ]
+@app.post("/api/bookmarks")
+def add_bookmark(req:BookmarkRequest):
+    with Session(engine) as s:
+        if not s.get(Resource,req.resource_id): raise HTTPException(404,"Resource not found")
+        existing=s.scalar(select(Bookmark).where(Bookmark.user==req.user,Bookmark.resource_id==req.resource_id))
+        if not existing: s.add(Bookmark(user=req.user,resource_id=req.resource_id)); s.commit()
+        return {"ok":True}
 
-    if not client:
-        return {
-            "filename": file.filename,
-            "ai_analysis": {
-                "candidate_skills": ["Python", "Data Structures", "SQL", "Git"],
-                "missing_skills": ["Docker", "Kubernetes", "CI/CD Pipelines"],
-                "match_percentage": 78,
-                "learning_roadmap": [
-                    "Week 1: Master Backend APIs & Architecture",
-                    "Week 2: Deploy scalable containerized apps to Cloud"
-                ]
-            },
-            "recommended_jobs": recommended_jobs
-        }
+@app.delete("/api/bookmarks")
+def remove_bookmark(user:str, resource_id:int):
+    with Session(engine) as s:
+        b=s.scalar(select(Bookmark).where(Bookmark.user==user,Bookmark.resource_id==resource_id))
+        if b: s.delete(b); s.commit()
+        return {"ok":True}
 
-    prompt = f"""
-    Resume Content: {extracted_text}
-    Job Description: {job_description}
+@app.get("/api/bookmarks")
+def list_bookmarks(user:str):
+    with Session(engine) as s:
+        ids=[b.resource_id for b in s.scalars(select(Bookmark).where(Bookmark.user==user)).all()]
+        return {"resource_ids":ids}
 
-    Evaluate match strictly and return ONLY a valid JSON object:
-    {{
-        "candidate_skills": ["detected strengths/skills"],
-        "missing_skills": ["weaknesses/missing skills"],
-        "match_percentage": 78,
-        "learning_roadmap": [
-            "Week 1: Core Fundamentals & APIs",
-            "Week 2: Advanced Cloud Projects"
-        ]
-    }}
-    """
-    for model_name in ["gemini-2.5-flash", "gemini-2.0-flash"]:
-        try:
-            response = client.models.generate_content(
-                model=model_name,
-                contents=prompt,
-                config=types.GenerateContentConfig(response_mime_type="application/json")
-            )
-            return {
-                "filename": file.filename,
-                "ai_analysis": json.loads(response.text),
-                "recommended_jobs": recommended_jobs
-            }
-        except Exception:
-            continue
-
-    return {
-        "filename": file.filename,
-        "ai_analysis": {
-            "candidate_skills": ["Python", "Data Structures", "Web Development"],
-            "missing_skills": ["System Design", "Cloud Infrastructure"],
-            "match_percentage": 80,
-            "learning_roadmap": ["Week 1: Scalable APIs", "Week 2: Docker & Cloud Deployments"]
-        },
-        "recommended_jobs": recommended_jobs
-    }
+@app.get("/api/health")
+def health(): return {"status":"ok","ai_configured":bool(client),"database":DB_PATH.exists()}
